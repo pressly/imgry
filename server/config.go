@@ -164,21 +164,26 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 	// matching some query from a Store, and we can seed the LRU this way, and keep
 	// the bolt data..
 
-	// Build the chain and open the stores
-	store := chainstore.New(
-		// logmgr.New(logger.l, ""),
-		memstore.New(cf.Chainstore.MemCacheSize*1024*1024),
-		chainstore.Async(
-			lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
-				metricsmgr.New("fn.store.bolt", nil,
-					boltstore.New(cf.Chainstore.Path+"store.db", "imgs"),
-				),
-			),
-			metricsmgr.New("fn.store.s3", nil,
-				s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
-			),
+	// Build the stores and setup the chain
+	memStore := memstore.New(cf.Chainstore.MemCacheSize * 1024 * 1024)
+
+	diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
+		metricsmgr.New("fn.store.bolt", nil,
+			boltstore.New(cf.Chainstore.Path+"store.db", "imgs"),
 		),
 	)
+
+	var store chainstore.Store
+
+	if cf.Chainstore.S3AccessKey != "" && cf.Chainstore.S3SecretKey != "" {
+		s3Store := metricsmgr.New("fn.store.s3", nil,
+			s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
+		)
+
+		store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
+	} else {
+		store = chainstore.New(memStore, chainstore.Async(diskStore))
+	}
 
 	if err := store.Open(); err != nil {
 		return nil, err
