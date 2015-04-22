@@ -15,6 +15,7 @@ make build
 ```
 
 Open browser to:
+
 `http://localhost:4446/mybucket?url=http://i.imgur.com/vEZy2Oh.jpg`
 
 this will download the image from the source, cache it, persist it,
@@ -23,15 +24,19 @@ and return the sized image (in this case, with zero sizing) to the client.
 **Now, some other variations:**
 
 *Scale to 300x*
+
 `http://localhost:4446/mybucket?url=http://i.imgur.com/vEZy2Oh.jpg&size=300x`
 
 *Resize to exactly 300x300*
+
 `http://localhost:4446/mybucket?url=http://i.imgur.com/vEZy2Oh.jpg&size=300x300`
 
 *Resize to 300x300 and maintain aspect ratio*
+
 `http://localhost:4446/mybucket?url=http://i.imgur.com/vEZy2Oh.jpg&size=300x300&op=cover`
 
 *Same as above with a cropbox at points (x1:10%,y1:10%) to (x2:90%,y2:90%)*
+
 `http://localhost:4446/mybucket?url=http://i.imgur.com/vEZy2Oh.jpg&size=300x300&op=cover&cb=0.1,0.1,0.9,0.9`
 
 ## Webapp usage
@@ -59,6 +64,13 @@ with the latest libjpeg-turbo and libpng.
 We use github.com/siddontang/ledisdb in production instead of redisdb. It's an Redis-API
 compatible engine that is designed for long-term persistence of the data set.. pretty much
 Redis on LevelDB.
+
+
+## Other
+
+* Imgry and its sizing operations can be used as a library, without the API server
+* Imgry supports pluggable image processing engines, but for now comes packaged
+with an ImageMagick engine by default (`imgry/imagick`)
 
 
 ## License
