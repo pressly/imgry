@@ -1,0 +1,28 @@
+[server]
+addr            = "0.0.0.0:4446"
+max_procs       = -1
+log_level       = "INFO"
+cache_max_age   = 7200 # 2 hours
+
+[cluster]
+local_node      = "http://127.0.0.1:4446"
+nodes           = [ "http://127.0.0.1:4446" ]
+# nodes           = [ "http://127.0.0.1:4446", "http://127.0.0.1:4447", "http://127.0.0.1:4448" ]
+
+[db]
+redis_uri       = "0.0.0.0:6379"
+
+[chainstore]
+path            = "/tmp/imgry/"
+mem_cache_size  = 100
+disk_cache_size = 500
+s3_bucket       = "imgry-dev"
+s3_access_key   = ""
+s3_secret_key   = ""
+
+[librato]
+enabled         = false
+email           = ""
+token           = ""
+namespace       = "imgry"
+source          = "imgry-dev"

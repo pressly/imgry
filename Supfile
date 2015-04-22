@@ -1,0 +1,103 @@
+# Imgry
+---
+
+env:
+  NAME: imgry
+  IMAGE: pressly/imgry
+  REPO: git@github.com:pressly/imgry.git
+  BRANCH: master
+  CONFIG: /etc/imgry.next.conf
+  HOST_PORT: 4446
+  CONTAINER_PORT: 4446
+
+networks:
+  local: # for testing/development purposes
+    env:
+      ENV: local
+    hosts:
+      - docker@localhost
+  beta:
+    env:
+      ENV: beta
+    hosts:
+      - ubuntu@betabox.x.pressly.io
+  production:
+    env:
+      ENV: production
+    hosts:
+      - ubuntu@imgry1.x.pressly.io
+      - ubuntu@imgry2.x.pressly.io
+      - ubuntu@imgry3.x.pressly.io
+
+commands:
+  config:
+    desc: Upload/test config file.
+    #upload:
+    #  - src: etc/imgry.$ENV.conf
+    #    dst: /tmp/
+    run: test -f $CONFIG
+
+  ping:
+    desc: Print uname and current date/time.
+    run: uname -a; date
+
+  ps:
+    desc: List running Docker containers
+    run: sudo docker ps | grep $NAME
+
+  pull:
+    desc: Pull git repository
+    script: ./scripts/docker-pull.sh
+
+  build:
+    desc: Build Docker image
+    script: ./scripts/docker-build.sh
+
+  image:
+    desc: List Docker image
+    run: sudo docker images | grep $IMAGE
+
+  run:
+    desc: Run Docker container
+    script: ./scripts/docker-run.sh
+
+  logs:
+    desc: Docker logs
+    run: sudo docker logs $NAME
+
+  tail-logs:
+    desc: Tail Docker logs
+    run: sudo docker logs --tail=20 -f $NAME
+
+  health:
+    desc: Application health check
+    run: curl localhost:$HOST_PORT
+
+  start:
+    desc: Start Docker container
+    run: sudo docker start $NAME || exit 0
+
+  restart:
+    desc: Restart Docker container
+    run: sudo docker restart $NAME || exit 0
+
+  stop:
+    desc: Stop Docker container
+    run: sudo docker stop $NAME || exit 0
+
+  rm:
+    desc: Remove Docker container
+    run: sudo docker rm $NAME || exit 0
+
+targets:
+  deploy:
+    - pull
+    - build
+    - image
+    - config
+    - stop
+    - rm
+    - run
+    - ps
+    - logs
+    - health

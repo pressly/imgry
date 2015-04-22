@@ -1,0 +1,20 @@
+sudo: true
+language: go
+
+go:
+  - 1.4
+
+services:
+  - redis-server
+
+before_install:
+  - sudo add-apt-repository -y ppa:moti-p/cc
+  - sudo apt-get update
+  - sudo apt-get -y --reinstall install imagemagick
+
+install:
+  - go get github.com/robfig/glock
+  - glock sync -n github.com/pressly/imgry < Glockfile
+
+script:
+  - go test ./...

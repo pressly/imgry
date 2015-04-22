@@ -1,0 +1,5 @@
+.DS_Store
+bin/
+cmd/imgry-server/tmp/
+etc/imgry.conf
+
