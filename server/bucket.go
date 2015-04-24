@@ -181,6 +181,10 @@ func (b *Bucket) DbSaveImage(im *Image, sizing *imgry.Sizing) (err error) {
 	m := metrics.GetOrRegisterTimer("fn.bucket.DbSaveImage", nil)
 	defer m.UpdateSince(time.Now())
 
+	if err := im.ValidateKey(); err != nil {
+		return err
+	}
+
 	idxKey := b.DbIndexKey(im.Key, sizing)
 
 	err = app.Chainstore.Put(idxKey, im.Data)

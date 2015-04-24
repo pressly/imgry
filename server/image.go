@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,12 @@ import (
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
 	"github.com/rcrowley/go-metrics"
+)
+
+var (
+	EmptyImageKey = sha1Hash("")
+
+	ErrInvalidImageKey = errors.New("invalid image key")
 )
 
 // TODO: we should probably keep the Sizing as a url.Values and store it in the Hash value separately..
@@ -106,7 +113,9 @@ func (im *Image) SizeIt(sizing *imgry.Sizing) error {
 	m := metrics.GetOrRegisterTimer("fn.image.SizeIt", nil)
 	defer m.UpdateSince(time.Now())
 
-	var err error
+	if err := im.ValidateKey(); err != nil {
+		return err
+	}
 
 	if im.img == nil {
 		if err := im.LoadImage(); err != nil {
@@ -114,7 +123,7 @@ func (im *Image) SizeIt(sizing *imgry.Sizing) error {
 		}
 	}
 
-	err = im.img.SizeIt(sizing)
+	err := im.img.SizeIt(sizing)
 	if err != nil {
 		return fmt.Errorf("Error occurred when sizing an image: %s", err)
 	}
@@ -129,7 +138,9 @@ func (im *Image) MakeSize(sizing *imgry.Sizing) (*Image, error) {
 	m := metrics.GetOrRegisterTimer("fn.image.MakeSize", nil)
 	defer m.UpdateSince(time.Now())
 
-	var err error
+	if err := im.ValidateKey(); err != nil {
+		return nil, err
+	}
 
 	im2 := &Image{
 		Key:         im.Key,
@@ -140,6 +151,8 @@ func (im *Image) MakeSize(sizing *imgry.Sizing) (*Image, error) {
 	}
 
 	// Clone the originating image
+	var err error
+
 	if err = im2.LoadImage(); err != nil {
 		return nil, err
 	}
@@ -150,6 +163,13 @@ func (im *Image) MakeSize(sizing *imgry.Sizing) (*Image, error) {
 	}
 
 	return im2, nil
+}
+
+func (im *Image) ValidateKey() error {
+	if im.Key == "" || im.Key == EmptyImageKey {
+		return ErrInvalidImageKey
+	}
+	return nil
 }
 
 func (im *Image) MimeType() string {
