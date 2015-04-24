@@ -14,7 +14,7 @@ github.com/pressly/go-metrics 5102e4a6cd4b8cfea15ea9fb9e62809cd8372f50
 github.com/pressly/gohttpware be07be427d534bb2b66e44bef18311e62437ab6b
 github.com/rcrowley/go-metrics dee209f2455f101a5e4e593dea94872d2c62d85d
 github.com/stretchr/testify e22aedd37671fb115be6c0c25129c405cb575cfd
-github.com/unrolled/render a9e7a35d2194896cd9985fd068ab3735ce3bc39f
+github.com/unrolled/render bdfac4a8df10cc9dc03ee14ba2f655137fd70378
 github.com/vaughan0/go-ini a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
 github.com/zenazn/goji 0276f3f3fb609aabf8d9ba7aea10c80ec979989d
 stathat.com/c/consistent 748f01b59d1b2218efe39513039e9ee31266d7c7
