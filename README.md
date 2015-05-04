@@ -10,6 +10,7 @@ First install Go 1.4+ and copy the etc/imgry.conf.sample (the default is fine), 
 ```zsh
 cd imgry/
 make tools
+make deps
 make build
 ./bin/imgry-server -config=etc/imgry.conf
 ```
