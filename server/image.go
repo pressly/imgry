@@ -49,7 +49,7 @@ func NewImageFromSrcUrl(srcUrl string) *Image {
 
 func sha1Hash(in string) string {
 	hasher := sha1.New()
-	fmt.Fprintf(hasher, in)
+	fmt.Fprint(hasher, in)
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
