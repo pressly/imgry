@@ -15,7 +15,7 @@ RUN cd /tmp && tar -zxvf libpng-1.6.17.tar.gz && cd libpng-1.6.17 && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
 ADD http://www.imagemagick.org/download/releases/ImageMagick-6.9.1-5.tar.gz /tmp/
-RUN cd /tmp && tar -zxvf ImageMagick-6.9.1-5.tar.gz && cd ImageMagick-6.9.1-5 && \
+RUN cd /tmp && tar -zxvf ImageMagick-6.9.1-6.tar.gz && cd ImageMagick-6.9.1-6 && \
     ./configure --prefix=/usr \
                 --enable-shared \
                 --disable-openmp \
