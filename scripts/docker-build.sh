@@ -8,5 +8,5 @@ sudo rm -rf bin
 
 # Build the resulting image. Tag it with version, then retag the latest.
 VERSION=$(scripts/version.sh --long)
-docker build --rm --no-cache -t $IMAGE:$VERSION .
-docker tag -f $IMAGE:$VERSION $IMAGE:latest
+sudo docker build --rm --no-cache -t $IMAGE:$VERSION .
+sudo docker tag -f $IMAGE:$VERSION $IMAGE:latest
