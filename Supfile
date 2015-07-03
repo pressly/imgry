@@ -90,6 +90,16 @@ commands:
     desc: Remove Docker container
     run: sudo docker rm $NAME || exit 0
 
+  shell:
+    desc: Interactive shell on all hosts
+    stdin: true
+    run: /bin/sh
+
+  exec:
+    desc: Exec into Docker container
+    stdin: true
+    run: sudo docker exec -i $NAME bash
+
 targets:
   deploy:
     - pull
