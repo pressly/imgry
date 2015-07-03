@@ -57,6 +57,7 @@ func (ng Engine) LoadBlob(b []byte, srcFormat ...string) (imgry.Image, error) {
 	// TODO: perhaps we pass the engine instance like Image{engine: i}
 	im := &Image{mw: mw, data: b}
 	if err := im.sync(); err != nil {
+		mw.Destroy()
 		return nil, err
 	}
 
