@@ -6,6 +6,7 @@ env:
   IMAGE: pressly/imgry
   REPO: git@github.com:pressly/imgry.git
   BRANCH: master
+  WORKDIR: /opt/imgry
   CONFIG: /data/etc/imgry.conf
   HOST_PORT: 4446
   CONTAINER_PORT: 4446

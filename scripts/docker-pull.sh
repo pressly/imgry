@@ -2,12 +2,12 @@
 set -e
 
 # Clone the repo for the first time.
-if [[ ! -d /tmp/$IMAGE || ! -d /tmp/$IMAGE/.git ]]; then
-	mkdir -p /tmp/$IMAGE
-	git clone -b $BRANCH $REPO /tmp/$IMAGE
+if [[ ! -d $WORKDIR || ! -d $WORKDIR/.git ]]; then
+	mkdir -p $WORKDIR
+	git clone -b $BRANCH $REPO $WORKDIR
 fi
 
-cd /tmp/$IMAGE
+cd $WORKDIR
 
 # Fix permissions.
 sudo chown -R $USER:$USER ./
