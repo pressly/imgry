@@ -40,4 +40,4 @@ RUN mv bin/imgry-server /bin/imgry-server
 
 EXPOSE 4446
 
-CMD ["/bin/imgry-server", "-config=/data/etc/imgry.conf"]
+CMD ["/bin/imgry-server", "-config=/etc/imgry.conf"]
