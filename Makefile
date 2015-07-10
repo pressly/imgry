@@ -33,7 +33,7 @@ coverage:
 
 build: clean
 	@mkdir -p ./bin
-	go build -o ./bin/imgry-server ./cmd/imgry-server
+	GOGC=off go build -o ./bin/imgry-server ./cmd/imgry-server
 
 clean:
 	@rm -rf ./bin
