@@ -3,18 +3,17 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"net/url"
 	"time"
+	"expvar"
 
 	"github.com/pressly/cji"
 	"github.com/pressly/consistentrd"
 	"github.com/pressly/imgry"
 	"github.com/unrolled/render"
-
 	"github.com/pressly/gohttpware/heartbeat"
 	"github.com/rcrowley/go-metrics"
-
-	"github.com/zenazn/goji/web"
 	"github.com/zenazn/goji/web/middleware"
 )
 
@@ -24,7 +23,7 @@ func NewRouter() http.Handler {
 		panic(err)
 	}
 
-	r := web.New()
+	r := cji.NewRouter()
 
 	r.Use(middleware.EnvInit)
 	r.Use(middleware.RequestID)
@@ -32,26 +31,28 @@ func NewRouter() http.Handler {
 	r.Use(RequestLogger)
 	r.Use(heartbeat.Route("/ping"))
 
-	r.Get("/", cji.Use(trackRoute("root")).On(func(w http.ResponseWriter, r *http.Request) {
+	r.Mount("/debug", Profiler())
+
+	r.Get("/", trackRoute("root"), func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("."))
-	}))
+	})
 
-	r.Get("/fetch", cji.Use(trackRoute("bucketV0GetItem")).On(BucketV0FetchItem)) // Deprecated: for Pressilla v2 apps
+	r.Get("/fetch", trackRoute("bucketV0GetItem"), BucketV0FetchItem) // Deprecated: for Pressilla v2 apps
 
-	r.Get("/info", cji.Use(trackRoute("imageInfo")).On(GetImageInfo))
+	r.Get("/info", trackRoute("imageInfo"), GetImageInfo)
 
-	r.Get("/:bucket", cji.Use(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).On(BucketGetIndex))
+	r.Get("/:bucket", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketGetIndex)
 	r.Post("/:bucket", BucketImageUpload)
 
-	r.Get("/:bucket/fetch", cji.Use(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).On(BucketFetchItem))
+	r.Get("/:bucket/fetch", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketFetchItem)
 
 	// DEPRECATED
-	r.Get("/:bucket//fetch", cji.Use(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).On(BucketFetchItem))
+	r.Get("/:bucket//fetch", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketFetchItem)
 
-	r.Get("/:bucket/add", cji.Use(trackRoute("bucketAddItems")).On(BucketAddItems))
-	r.Get("/:bucket/:key", cji.Use(conrd.Route()).On(BucketGetItem))
-	r.Delete("/:bucket/:key", cji.Use(conrd.Route()).On(BucketDeleteItem))
+	r.Get("/:bucket/add", trackRoute("bucketAddItems"), BucketAddItems)
+	r.Get("/:bucket/:key", conrd.Route(), BucketGetItem)
+	r.Delete("/:bucket/:key", conrd.Route(), BucketDeleteItem)
 
 	return r
 }
@@ -121,4 +122,33 @@ func (r *Responder) cacheErrors(w http.ResponseWriter, err error) {
 		w.Header().Set("Surrogate-Control", "max-age=300") // 5 minutes
 	default:
 	}
+}
+
+func Profiler() http.Handler {
+	r := cji.NewRouter()
+	r.Handle("/vars", expVars)
+	r.Handle("/pprof/", pprof.Index)
+	r.Handle("/pprof/cmdline", pprof.Cmdline)
+	r.Handle("/pprof/profile", pprof.Profile)
+	r.Handle("/pprof/symbol", pprof.Symbol)
+	r.Handle("/pprof/block", pprof.Handler("block").ServeHTTP)
+	r.Handle("/pprof/heap", pprof.Handler("heap").ServeHTTP)
+	r.Handle("/pprof/goroutine", pprof.Handler("goroutine").ServeHTTP)
+	r.Handle("/pprof/threadcreate", pprof.Handler("threadcreate").ServeHTTP)
+	return r
+}
+
+// Replicated from expvar.go as not public.
+func expVars(w http.ResponseWriter, r *http.Request) {
+	first := true
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	fmt.Fprintf(w, "{\n")
+	expvar.Do(func(kv expvar.KeyValue) {
+		if !first {
+			fmt.Fprintf(w, ",\n")
+		}
+		first = false
+		fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
+	})
+	fmt.Fprintf(w, "\n}\n")
 }
