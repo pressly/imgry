@@ -31,7 +31,7 @@ func NewRouter() http.Handler {
 	r.Use(RequestLogger)
 	r.Use(heartbeat.Route("/ping"))
 
-	r.Mount("/debug", Profiler())
+	r.Mount("/debug", middleware.NoCache, Profiler())
 
 	r.Get("/", trackRoute("root"), func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
