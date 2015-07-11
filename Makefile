@@ -15,8 +15,6 @@ all:
 	@echo ""
 	@echo "  dist        - clean build with deps and tools"
 	@echo "  tools       - go get's a bunch of tools for dev"
-	@echo "  deps        - pull and setup dependencies"
-	@echo "  update_deps - update deps lock file"
 
 run:
 	@(export CONFIG=$$PWD/etc/imgry.conf && \
@@ -31,9 +29,13 @@ retest: test
 coverage:
 	@go test -cover -v ./...
 
+dist: clean
+	@mkdir -p ./bin
+	GO15VENDOREXPERIMENT=1 $(MAKE) build
+
 build: clean
 	@mkdir -p ./bin
-	GOGC=off GO15VENDOREXPERIMENT=1 go build -o ./bin/imgry-server ./cmd/imgry-server
+	GOGC=off go build -o ./bin/imgry-server ./cmd/imgry-server
 
 clean:
 	@rm -rf ./bin
@@ -51,4 +53,3 @@ deps:
 update_deps:
 	#@glock save -n github.com/pressly/imgry > Glockfile
 
-dist: clean dist_tools deps build
