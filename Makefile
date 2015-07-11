@@ -46,9 +46,9 @@ dist_tools:
 	go get github.com/robfig/glock
 
 deps:
-	@glock sync -n github.com/pressly/imgry < Glockfile
+	#@glock sync -n github.com/pressly/imgry < Glockfile
 
 update_deps:
-	@glock save -n github.com/pressly/imgry > Glockfile
+	#@glock save -n github.com/pressly/imgry > Glockfile
 
 dist: clean dist_tools deps build
