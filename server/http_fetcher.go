@@ -58,9 +58,10 @@ func (hf HttpFetcher) client() *http.Client {
 			}).Dial,
 			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 			TLSHandshakeTimeout: 5 * time.Second,
-			MaxIdleConnsPerHost: 5,
+			MaxIdleConnsPerHost: 2,
 			DisableCompression:  true,
-			DisableKeepAlives:   false, // HMM.. keep alives..?
+			DisableKeepAlives:   false,
+			ResponseHeaderTimeout: hf.ReqTimeout,
 		},
 	}
 	return hf.Client
@@ -108,13 +109,13 @@ func (hf HttpFetcher) GetAll(urls []string) ([]*HttpFetcherResponse, error) {
 			lg.Info("Fetching %s", url.String())
 
 			fetch, err := hf.client().Get(url.String())
+			defer fetch.Body.Close()
+
 			if err != nil {
 				lg.Warning("Error fetching %s because %s", url.String(), err)
 				resp.Err = err
 				return
 			}
-			defer fetch.Body.Close()
-
 			resp.Status = fetch.StatusCode
 
 			body, err := ioutil.ReadAll(fetch.Body)
