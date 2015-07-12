@@ -30,6 +30,11 @@ type HttpFetcher struct {
 	// TODO: lru cache of responses.. like a reverse cache.. including bad urls.. 404s, etc...
 }
 
+// TODO: keep-alives / persistent connections
+// I've noticed that Go's http client doesn't clean up the idle connections
+// for a large number of hosts. Instead we will have to call hf.Transport.CloseIdleConnections()
+// every HostKeepAlive duration (assuming > 1 second)
+
 type HttpFetcherResponse struct {
 	URL    *url.URL
 	Status int
@@ -68,8 +73,6 @@ func (hf HttpFetcher) client() *http.Client {
 		Timeout: hf.ReqTimeout,
 		Transport: hf.Transport,
 	}
-
-	// transport.CloseIdleConnections()
 
 	return hf.Client
 }
