@@ -60,7 +60,7 @@ func (hf HttpFetcher) client() *http.Client {
 		TLSHandshakeTimeout: 5 * time.Second,
 		MaxIdleConnsPerHost: 2,
 		DisableCompression:  true,
-		DisableKeepAlives:   false,
+		DisableKeepAlives:   true,
 		ResponseHeaderTimeout: hf.ReqTimeout,
 	}
 
@@ -122,7 +122,7 @@ func (hf HttpFetcher) GetAll(urls []string) ([]*HttpFetcherResponse, error) {
 				return
 			}
 			defer fetch.Body.Close()
-			
+
 			resp.Status = fetch.StatusCode
 
 			body, err := ioutil.ReadAll(fetch.Body)
