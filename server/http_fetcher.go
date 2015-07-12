@@ -21,6 +21,7 @@ var (
 
 type HttpFetcher struct {
 	Client *http.Client
+	Transport *http.Transport
 
 	ReqTimeout     time.Duration
 	ReqNumAttempts int
@@ -48,22 +49,28 @@ func (hf HttpFetcher) client() *http.Client {
 	if hf.Client != nil {
 		return hf.Client
 	}
+
+	hf.Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   hf.ReqTimeout,
+			KeepAlive: hf.HostKeepAlive,
+		}).Dial,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		TLSHandshakeTimeout: 5 * time.Second,
+		MaxIdleConnsPerHost: 2,
+		DisableCompression:  true,
+		DisableKeepAlives:   false,
+		ResponseHeaderTimeout: hf.ReqTimeout,
+	}
+
 	hf.Client = &http.Client{
 		Timeout: hf.ReqTimeout,
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   hf.ReqTimeout,
-				KeepAlive: hf.HostKeepAlive,
-			}).Dial,
-			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-			TLSHandshakeTimeout: 5 * time.Second,
-			MaxIdleConnsPerHost: 2,
-			DisableCompression:  true,
-			DisableKeepAlives:   false,
-			ResponseHeaderTimeout: hf.ReqTimeout,
-		},
+		Transport: hf.Transport,
 	}
+
+	// transport.CloseIdleConnections()
+
 	return hf.Client
 }
 
@@ -109,13 +116,13 @@ func (hf HttpFetcher) GetAll(urls []string) ([]*HttpFetcherResponse, error) {
 			lg.Info("Fetching %s", url.String())
 
 			fetch, err := hf.client().Get(url.String())
-			defer fetch.Body.Close()
-
 			if err != nil {
 				lg.Warning("Error fetching %s because %s", url.String(), err)
 				resp.Err = err
 				return
 			}
+			defer fetch.Body.Close()
+			
 			resp.Status = fetch.StatusCode
 
 			body, err := ioutil.ReadAll(fetch.Body)

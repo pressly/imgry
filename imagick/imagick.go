@@ -70,10 +70,11 @@ func (ng Engine) GetImageInfo(b []byte, srcFormat ...string) (*imgry.ImageInfo, 
 	}
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+
 	if !mw.IsVerified() {
 		return nil, ErrEngineFailure
 	}
-	defer mw.Destroy()
 
 	err := mw.PingImageBlob(b)
 	if err != nil {
