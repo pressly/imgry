@@ -35,7 +35,7 @@ dist: clean
 
 build: clean
 	@mkdir -p ./bin
-	GOGC=off go build -o ./bin/imgry-server ./cmd/imgry-server
+	GOGC=off go build -i -o ./bin/imgry-server ./cmd/imgry-server
 
 clean:
 	@rm -rf ./bin
