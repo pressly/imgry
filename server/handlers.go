@@ -6,7 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"encoding/base64"
+
 	"github.com/pressly/imgry/imagick"
+	"github.com/pressly/omnibed/lib/lg"
 
 	"github.com/goware/urlx"
 	"github.com/pressly/imgry"
@@ -157,21 +160,45 @@ func GetImageInfo(c web.C, w http.ResponseWriter, r *http.Request) {
 func BucketImageUpload(c web.C, w http.ResponseWriter, r *http.Request) {
 	var url string
 	var err error
+	var data []byte
+	var im *Image
 
 	file, header, err := r.FormFile("file")
-	if err != nil {
+	switch err {
+	case nil:
+		defer file.Close()
+
+		data, err = ioutil.ReadAll(file)
+		if err != nil {
+			respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		im = NewImageFromSrcUrl(header.Filename)
+
+	case http.ErrMissingFile:
+		base64file := r.FormValue("base64file")
+		fileLen := len(base64file)
+		if fileLen < 100 {
+			respond.JSON(w, 422, map[string]interface{}{"error": "invalid file upload"})
+			return
+		}
+		data, err = base64.StdEncoding.DecodeString(base64file)
+		if err != nil {
+			respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
+			return
+		}
+
+		// balance collision chance vs hash time
+		if fileLen > 10000 {
+			fileLen = 10000
+		}
+		im = NewImageFromSrcUrl(string(base64file[0:fileLen]))
+
+	default:
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return
 	}
-	defer file.Close()
 
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
-		return
-	}
-
-	im := NewImageFromSrcUrl(header.Filename)
 	defer im.Release()
 
 	im.Data = data
