@@ -1,18 +1,15 @@
 package server
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
-	"encoding/base64"
-
-	"github.com/pressly/imgry/imagick"
-	"github.com/pressly/omnibed/lib/lg"
-
 	"github.com/goware/urlx"
 	"github.com/pressly/imgry"
+	"github.com/pressly/imgry/imagick"
 	"github.com/zenazn/goji/web"
 )
 
