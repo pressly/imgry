@@ -1,4 +1,4 @@
-FROM pressly/golang:1.5b3
+FROM golang:1.5rc1
 
 # Dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y build-essential \
