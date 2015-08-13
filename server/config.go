@@ -15,7 +15,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/op/go-logging"
 	"github.com/pressly/chainstore"
-	"github.com/pressly/chainstore/boltstore"
+	"github.com/pressly/chainstore/levelstore"
 	"github.com/pressly/chainstore/lrumgr"
 	"github.com/pressly/chainstore/memstore"
 	"github.com/pressly/chainstore/metricsmgr"
@@ -169,7 +169,7 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 
 	diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
 		metricsmgr.New("fn.store.bolt", nil,
-			boltstore.New(cf.Chainstore.Path+"store.db", "imgs"),
+			levelstore.New(cf.Chainstore.Path),
 		),
 	)
 

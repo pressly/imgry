@@ -12,16 +12,6 @@ env:
   CONTAINER_PORT: 4446
 
 networks:
-  local: # for testing/development purposes
-    env:
-      ENV: local
-    hosts:
-      - docker@localhost
-  beta:
-    env:
-      ENV: beta
-    hosts:
-      - ubuntu@betabox.x.pressly.io
   production:
     env:
       ENV: production
