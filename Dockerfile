@@ -1,4 +1,4 @@
-FROM golang:1.5rc1
+FROM golang:1.5
 
 # Dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y build-essential \
