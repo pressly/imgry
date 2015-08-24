@@ -10,6 +10,6 @@ sudo docker run -d \
 	-p $HOST_PORT:$CONTAINER_PORT \
 	-v $CONFIG:/etc/imgry.conf \
 	-v /data:/data \
-	--memory-swappines=0 \
+	--memory-swappiness=0 \
 	--restart=always \
 	--name $NAME $IMAGE
