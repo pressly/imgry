@@ -12,4 +12,6 @@ sudo docker run -d \
 	-v /data:/data \
 	--memory-swappiness=0 \
 	--restart=always \
+	--log-opt max-size=100m \
+	--log-opt max-file=5 \
 	--name $NAME $IMAGE
