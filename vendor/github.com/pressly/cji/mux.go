@@ -119,7 +119,7 @@ func (r *Mux) Group(fn func(r Router)) Router {
 }
 
 func (r *Mux) Route(pattern string, fn func(r Router)) Router {
-	sr := &Mux{Mux: web.New()}
+	sr := NewRouter()
 	r.Mount(pattern, append(r.middlewares, sr)...)
 	if fn != nil {
 		fn(sr)

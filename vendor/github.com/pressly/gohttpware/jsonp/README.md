@@ -1,5 +1,7 @@
 # JSONP Go http middleware
 
+**NOTE: this package has moved to https://github.com/goware/jsonp**
+
 JSONP is a common technique used to communicate with a JSON-serving Web Service with a 
 Web browser over cross-domains, in place of a XHR request. There is a lot written about
 JSONP out there, but the tl;dr on it is a Javascript http client requesting JSONP

@@ -68,6 +68,8 @@ func New(localNode string, allNodes []string) (conrd *consistentRoad, err error)
 			}).Dial,
 			TLSHandshakeTimeout: NodeReqTimeout,
 			MaxIdleConnsPerHost: 30,
+			DisableCompression:  true,
+			DisableKeepAlives:   false,
 		},
 	}
 

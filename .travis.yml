@@ -2,7 +2,7 @@ sudo: true
 language: go
 
 go:
-  - 1.4
+  - 1.5
 
 services:
   - redis-server
@@ -13,8 +13,7 @@ before_install:
   - sudo apt-get -y --reinstall install imagemagick
 
 install:
-  - go get github.com/robfig/glock
-  - glock sync -n github.com/pressly/imgry < Glockfile
+  - make dist-tools
 
 script:
-  - go test ./...
+  - make dist-test

@@ -16,11 +16,10 @@ package redis_test
 
 import (
 	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"math"
 	"reflect"
 	"testing"
-
-	"github.com/garyburd/redigo/redis"
 )
 
 var scanConversionTests = []struct {

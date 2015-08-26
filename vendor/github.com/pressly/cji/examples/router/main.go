@@ -10,19 +10,8 @@ import (
 	"github.com/zenazn/goji/web/middleware"
 )
 
-var DEBUG = true
-
-func NewRouter() cji.Router {
-	r := cji.NewRouter()
-	if DEBUG {
-		return NewDebugRouter(r)
-	} else {
-		return r
-	}
-}
-
 func main() {
-	r := NewRouter()
+	r := cji.NewRouter()
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -31,11 +20,7 @@ func main() {
 
 	r.Mount("/accounts", sup, accountsRouter())
 
-	if d, ok := r.(*DebugMux); ok {
-		d.PrintRoutes()
-	}
-
-	// http.ListenAndServe(":3333", r)
+	http.ListenAndServe(":3333", r)
 }
 
 func apiIndex(c web.C, w http.ResponseWriter, r *http.Request) {
@@ -45,8 +30,7 @@ func apiIndex(c web.C, w http.ResponseWriter, r *http.Request) {
 //--
 
 func accountsRouter() cji.Router {
-	// r := cji.NewRouter()
-	r := NewRouter()
+	r := cji.NewRouter()
 	r.Use(sup1)
 	r.Get("/", listAccounts)
 	r.Get("/hi", hiAccounts)
