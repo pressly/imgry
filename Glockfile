@@ -1,7 +1,7 @@
 github.com/BurntSushi/toml 056c9bc7be7190eaa7715723883caffa5f8fa3e4
 github.com/PuerkitoBio/purell d69616f51cdfcd7514d6a380847a152dfc2a749d
 github.com/garyburd/redigo 9d4db5d1dbeff473d50e1bb82f5405c8cca0f0ac
-github.com/gographics/imagick e210a63f8d14a741c2ccfe78cd5295a207ec69c7
+github.com/gographics/imagick 943dd0909306f8bea46cc7f855de8ae6790730d4
 github.com/golang/snappy 723cc1e459b8eea2dea4583200fd60757d40097a
 github.com/goware/urlx 0c5b5e0d84d824b141166ed64e8c88e24753c37f
 github.com/mitchellh/goamz caaaea8b30ee15616494ee68abd5d8ebbbef05cf
