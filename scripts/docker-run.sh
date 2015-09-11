@@ -6,7 +6,7 @@ if [ ! -f $CONFIG ]; then
 	exit 1
 fi
 
-sudo docker daemon \
+sudo docker run -d \
 	-p $HOST_PORT:$CONTAINER_PORT \
 	-v $CONFIG:/etc/imgry.conf \
 	-v /data:/data \
