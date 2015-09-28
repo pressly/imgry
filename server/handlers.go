@@ -41,21 +41,21 @@ func BucketGetItem(c web.C, w http.ResponseWriter, r *http.Request) {
 	// that use it..
 	bucket, err := NewBucket(c.URLParams["bucket"])
 	if err != nil {
-		lg.Error("Failed to create bucket for %s cause: %s", r.URL, err)
+		lg.Errorf("Failed to create bucket for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
 		return
 	}
 
 	sizing, err := imgry.NewSizingFromQuery(r.URL.RawQuery)
 	if err != nil {
-		lg.Error("Failed to create sizing for %s cause: %s", r.URL, err)
+		lg.Errorf("Failed to create sizing for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
 		return
 	}
 
 	im, err := bucket.GetImageSize(c.URLParams["key"], sizing)
 	if err != nil {
-		lg.Error("Failed to get image for %s cause: %s", r.URL, err)
+		lg.Errorf("Failed to get image for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
 		return
 	}
@@ -106,13 +106,13 @@ func BucketFetchItem(c web.C, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// lg.Info("BucketFetchItem, after DbFindImage... %v", err)
+	// lg.Infof("BucketFetchItem, after DbFindImage... %v", err)
 
 	// Fetch the image on-demand and add to bucket if we dont have it
 	if err == ErrImageNotFound {
 		_, err := bucket.AddImagesFromUrls([]string{fetchUrl})
 		if err != nil {
-			lg.Error("Fetching failed for %s because %s", fetchUrl, err)
+			lg.Errorf("Fetching failed for %s because %s", fetchUrl, err)
 			respond.ImageError(w, 422, err)
 			return
 		}

@@ -75,7 +75,7 @@ func RequestLogger(next http.Handler) http.Handler {
 		lw := &loggedResponseWriter{w, -1}
 		next.ServeHTTP(lw, r)
 
-		lg.Infof("Completed (%s): %v %s in %v\n",
+		lg.Infof("Completed (%s): %v %s in %v",
 			u,
 			lw.Status(),
 			http.StatusText(lw.Status()),

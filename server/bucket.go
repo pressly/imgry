@@ -63,7 +63,7 @@ func (b *Bucket) AddImagesFromUrls(urls []string) ([]*Image, error) {
 		if r.Status == 200 && len(r.Data) > 0 {
 			images[i].Data = r.Data
 			if err = images[i].LoadImage(); err != nil {
-				lg.Error("LoadBlob data for %s returned error: %s", r.URL.String(), err)
+				lg.Errorf("LoadBlob data for %s returned error: %s", r.URL.String(), err)
 			}
 		}
 	}
