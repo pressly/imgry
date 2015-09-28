@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/goware/lg"
 	"github.com/goware/urlx"
 	"github.com/rcrowley/go-metrics"
 )
@@ -20,7 +21,7 @@ var (
 )
 
 type HttpFetcher struct {
-	Client *http.Client
+	Client    *http.Client
 	Transport *http.Transport
 
 	ReqTimeout     time.Duration
@@ -61,16 +62,16 @@ func (hf HttpFetcher) client() *http.Client {
 			Timeout:   hf.ReqTimeout,
 			KeepAlive: hf.HostKeepAlive,
 		}).Dial,
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-		TLSHandshakeTimeout: 5 * time.Second,
-		MaxIdleConnsPerHost: 2,
-		DisableCompression:  true,
-		DisableKeepAlives:   true,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		TLSHandshakeTimeout:   5 * time.Second,
+		MaxIdleConnsPerHost:   2,
+		DisableCompression:    true,
+		DisableKeepAlives:     true,
 		ResponseHeaderTimeout: hf.ReqTimeout,
 	}
 
 	hf.Client = &http.Client{
-		Timeout: hf.ReqTimeout,
+		Timeout:   hf.ReqTimeout,
 		Transport: hf.Transport,
 	}
 
@@ -116,11 +117,11 @@ func (hf HttpFetcher) GetAll(urls []string) ([]*HttpFetcherResponse, error) {
 			}
 			resp.URL = url
 
-			lg.Info("Fetching %s", url.String())
+			lg.Infof("Fetching %s", url.String())
 
 			fetch, err := hf.client().Get(url.String())
 			if err != nil {
-				lg.Warning("Error fetching %s because %s", url.String(), err)
+				lg.Warnf("Error fetching %s because %s", url.String(), err)
 				resp.Err = err
 				return
 			}

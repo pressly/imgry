@@ -6,12 +6,10 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/pressly/imgry/imagick"
-
-	"github.com/op/go-logging"
+	"github.com/goware/lg"
 	"github.com/pressly/imgry"
+	"github.com/pressly/imgry/imagick"
 	"github.com/pressly/imgry/server"
-
 	"github.com/zenazn/goji/graceful"
 )
 
@@ -38,13 +36,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	lg := logging.MustGetLogger("imgry")
-	lg.Info("** Imgry Server v%s at %s **\n", imgry.VERSION, srv.Config.Server.Addr)
-	lg.Info("** Engine: %s", imagick.Engine{}.Version())
+	lg.Infof("** Imgry Server v%s at %s **\n", imgry.VERSION, srv.Config.Server.Addr)
+	lg.Infof("** Engine: %s", imagick.Engine{}.Version())
 
 	err = graceful.ListenAndServe(srv.Config.Server.Addr, srv.NewRouter())
 	if err != nil {
-		log.Fatal(err.Error())
+		lg.Fatal(err.Error())
 	}
 	graceful.Wait()
 }

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/goware/lg"
 	"github.com/pressly/imgry"
 	"github.com/rcrowley/go-metrics"
 )

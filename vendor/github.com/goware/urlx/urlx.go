@@ -5,8 +5,11 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/net/idna"
 
 	"github.com/PuerkitoBio/purell"
 )
@@ -16,8 +19,7 @@ import (
 // its behavior:
 // 1. It forces the default scheme and port.
 // 2. It favors absolute paths over relative ones, thus "example.com"
-//    is parsed into url.Host instead of into url.Path.
-// 3. It splits Host:Port into separate fields by default.
+//    is parsed into url.Host instead of url.Path.
 // 4. It lowercases the Host (not only the Scheme).
 func Parse(rawURL string) (*url.URL, error) {
 	// Force default http scheme, so net/url.Parse() doesn't
@@ -34,20 +36,61 @@ func Parse(rawURL string) (*url.URL, error) {
 	// Use net/url.Parse() now.
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, &url.Error{"parse", rawURL, err}
+		return nil, err
 	}
-	if u.Host == "" {
-		return nil, &url.Error{"parse", rawURL, errors.New("empty host")}
+
+	host, _, err := SplitHostPort(u)
+	if err != nil {
+		return nil, err
 	}
+	if err := checkHost(host); err != nil {
+		return nil, err
+	}
+
 	u.Host = strings.ToLower(u.Host)
+	u.Scheme = strings.ToLower(u.Scheme)
 
 	return u, nil
 }
 
-// SplitHostPort splits a network address of the form "host:port" into
+var (
+	// RFC 1035.
+	domainRegexp = regexp.MustCompile(`^([a-zA-Z0-9-]{1,63}\.)+[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$`)
+	ipv4Regexp   = regexp.MustCompile(`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`)
+	ipv6Regexp   = regexp.MustCompile(`^\[[a-fA-F0-9:]+\]$`)
+)
+
+func checkHost(host string) error {
+	if host == "" {
+		return &url.Error{"host", host, errors.New("empty host")}
+	}
+
+	host = strings.ToLower(host)
+	if domainRegexp.MatchString(host) || host == "localhost" {
+		return nil
+	}
+
+	if punycode, err := idna.ToASCII(host); err != nil {
+		return err
+	} else if domainRegexp.MatchString(punycode) {
+		return nil
+	}
+
+	// IPv4 and IPv6.
+	if ipv4Regexp.MatchString(host) || ipv6Regexp.MatchString(host) {
+		return nil
+	}
+
+	return &url.Error{"host", host, errors.New("invalid host")}
+}
+
+// SplitHostPort splits network address of the form "host:port" into
 // host and port. Unlike net.SplitHostPort(), it doesn't remove brackets
 // from [IPv6] host and it accepts net/url.URL struct instead of a string.
 func SplitHostPort(u *url.URL) (host, port string, err error) {
+	if u == nil {
+		return "", "", &url.Error{"host", host, errors.New("empty url")}
+	}
 	host = u.Host
 
 	// Find last colon.
@@ -59,15 +102,10 @@ func SplitHostPort(u *url.URL) (host, port string, err error) {
 		}
 	}
 
-	// Host is required field.
-	if host == "" {
-		return host, port, &url.Error{"splithostport", host, errors.New("empty host")}
-	}
-
 	// Port is optional. But if it's set, is it a number?
 	if port != "" {
 		if _, err := strconv.Atoi(port); err != nil {
-			return host, port, &url.Error{"splithostport", host, err}
+			return "", "", &url.Error{"port", host, err}
 		}
 	}
 
@@ -89,10 +127,27 @@ const normalizeFlags purell.NormalizationFlags = purell.FlagRemoveDefaultPort |
 // 5. Sort query parameters.
 // 6. Decode host IP into decimal numbers.
 // 7. Handle escape values.
+// 8. Decode Punycode domains into UTF8 representation.
 func Normalize(u *url.URL) (string, error) {
-	if u == nil || u.Host == "" {
-		return "", &url.Error{"normalize", u.String(), errors.New("empty host")}
+	host, port, err := SplitHostPort(u)
+	if err != nil {
+		return "", err
 	}
+	if err := checkHost(host); err != nil {
+		return "", err
+	}
+
+	// Decode Punycode.
+	host, err = idna.ToUnicode(host)
+	if err != nil {
+		return "", err
+	}
+
+	u.Host = strings.ToLower(host)
+	if port != "" {
+		u.Host += ":" + port
+	}
+	u.Scheme = strings.ToLower(u.Scheme)
 
 	return purell.NormalizeURL(u, normalizeFlags), nil
 }
@@ -105,9 +160,7 @@ func NormalizeString(rawURL string) (string, error) {
 		return "", err
 	}
 
-	// Don't use purell.NormalizeURLString() directly,
-	// we want to force behavior of our Parse() function.
-	return purell.NormalizeURL(u, normalizeFlags), nil
+	return Normalize(u)
 }
 
 // Resolve resolves the URL host to its IP address.

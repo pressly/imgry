@@ -3,13 +3,11 @@ package server
 import (
 	"net/http"
 
-	"github.com/op/go-logging"
 	"github.com/pressly/chainstore"
 )
 
 var (
 	app     *Server
-	lg      = logging.MustGetLogger("imgry")
 	respond = NewResponder()
 )
 
@@ -31,9 +29,7 @@ func (srv *Server) Configure() (err error) {
 		return err
 	}
 
-	if err := srv.Config.SetupLogger(lg); err != nil {
-		return err
-	}
+	srv.Config.SetupLogging()
 
 	srv.DB, err = srv.Config.GetDB()
 	if err != nil {

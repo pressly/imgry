@@ -3,23 +3,23 @@ package server
 import (
 	"errors"
 	"fmt"
-	stdlog "log"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
-	"github.com/pressly/go-metrics/librato"
-	"github.com/rcrowley/go-metrics"
-
 	"github.com/BurntSushi/toml"
-	"github.com/op/go-logging"
+	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chainstore/levelstore"
 	"github.com/pressly/chainstore/lrumgr"
 	"github.com/pressly/chainstore/memstore"
 	"github.com/pressly/chainstore/metricsmgr"
 	"github.com/pressly/chainstore/s3store"
+	"github.com/pressly/go-metrics/librato"
+	"github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -99,35 +99,11 @@ func (cf *Config) SetupRuntime() (err error) {
 	return nil
 }
 
-type logProxyWriter struct {
-	Logger *logging.Logger
-}
-
-func (l *logProxyWriter) Write(p []byte) (n int, err error) {
-	l.Logger.Info("%s", p)
-	return len(p), nil
-}
-
-func (cf *Config) SetupLogger(lg *logging.Logger) error {
-	logging.SetFormatter(logging.MustStringFormatter("%{level} %{message}"))
-	logging.SetBackend(logging.NewLogBackend(os.Stdout, "", stdlog.LstdFlags))
-
-	// Setup the default log level
-	cfLevel := cf.Server.LogLevel
-	if cfLevel == "" {
-		cfLevel = "INFO"
-	}
-	logLevel, err := logging.LogLevel(cfLevel)
+func (cf *Config) SetupLogging() {
+	err := lg.SetLevelString(strings.ToLower(cf.Server.LogLevel))
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	logging.SetLevel(logLevel, lg.Module)
-
-	// Redirect the standard logger
-	stdlog.SetOutput(&logProxyWriter{lg})
-	stdlog.SetFlags(0)
-
-	return nil
 }
 
 func (cf *Config) GetDB() (*DB, error) {

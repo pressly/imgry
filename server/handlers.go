@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/goware/lg"
 	"github.com/goware/urlx"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"

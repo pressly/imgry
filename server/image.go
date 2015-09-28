@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goware/lg"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
 	"github.com/rcrowley/go-metrics"
@@ -82,7 +83,7 @@ func (im *Image) LoadImage() (err error) {
 	im.img, err = ng.LoadBlob(im.Data, formatHint)
 	if err != nil {
 		if err == imagick.ErrEngineFailure {
-			lg.Error("**** ENGINE FAILURE on %s", im.SrcUrl)
+			lg.Errorf("**** ENGINE FAILURE on %s", im.SrcUrl)
 		}
 		return err
 	}

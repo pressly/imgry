@@ -1,19 +1,20 @@
 package server
 
 import (
+	"expvar"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"net/url"
 	"time"
-	"expvar"
 
+	"github.com/goware/lg"
 	"github.com/pressly/cji"
 	"github.com/pressly/consistentrd"
-	"github.com/pressly/imgry"
-	"github.com/unrolled/render"
 	"github.com/pressly/gohttpware/heartbeat"
+	"github.com/pressly/imgry"
 	"github.com/rcrowley/go-metrics"
+	"github.com/unrolled/render"
 	"github.com/zenazn/goji/web/middleware"
 )
 
@@ -69,18 +70,17 @@ func RequestLogger(next http.Handler) http.Handler {
 		}
 
 		start := time.Now()
-		lg.Info(fmt.Sprintf("Started %s %s", r.Method, u))
+		lg.Infof("Started %s %s", r.Method, u)
 
 		lw := &loggedResponseWriter{w, -1}
 		next.ServeHTTP(lw, r)
 
-		lg.Info(fmt.Sprintf(
-			"Completed (%s): %v %s in %v\n",
+		lg.Infof("Completed (%s): %v %s in %v\n",
 			u,
 			lw.Status(),
 			http.StatusText(lw.Status()),
 			time.Since(start),
-		))
+		)
 	}
 	return http.HandlerFunc(h)
 }
