@@ -14,6 +14,7 @@ import (
 	"github.com/pressly/gohttpware/heartbeat"
 	"github.com/pressly/imgry"
 	"github.com/rcrowley/go-metrics"
+	"github.com/tobi/airbrake-go"
 	"github.com/unrolled/render"
 	"github.com/zenazn/goji/web/middleware"
 )
@@ -30,6 +31,10 @@ func NewRouter() http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(RequestLogger)
+	r.Use(middleware.Recoverer)
+	if app.Config.Airbrake.ApiKey != "" {
+		r.Use(AirbrakeRecoverer(app.Config.Airbrake.ApiKey))
+	}
 	r.Use(heartbeat.Route("/ping"))
 
 	r.Mount("/debug", middleware.NoCache, Profiler())
@@ -151,4 +156,20 @@ func expVars(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
 	})
 	fmt.Fprintf(w, "\n}\n")
+}
+
+// Airbrake recoverer middleware to capture and report any panics to
+// airbrake.io.
+func AirbrakeRecoverer(apiKey string) func(http.Handler) http.Handler {
+	airbrake.ApiKey = apiKey
+	f := func(h http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			if apiKey != "" {
+				defer airbrake.CapturePanic(r)
+			}
+			h.ServeHTTP(w, r)
+		}
+		return http.HandlerFunc(fn)
+	}
+	return f
 }

@@ -3,6 +3,7 @@ addr            = "0.0.0.0:4446"
 max_procs       = -1
 log_level       = "INFO"
 cache_max_age   = 7200 # 2 hours
+tmp_dir         = "/tmp/"
 
 [cluster]
 local_node      = "http://127.0.0.1:4446"
@@ -11,6 +12,9 @@ nodes           = [ "http://127.0.0.1:4446" ]
 
 [db]
 redis_uri       = "0.0.0.0:6379"
+
+[airbrake]
+api_key         = ""
 
 [chainstore]
 path            = "/tmp/imgry/"

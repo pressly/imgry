@@ -29,7 +29,8 @@ var (
 type Config struct {
 	Server     ServerConfig     `toml:"server"`
 	Cluster    ClusterConfig    `toml:"cluster"`
-	DbConfig   DbConfig         `toml:"db"`
+	DB         DBConfig         `toml:"db"`
+	Airbrake   AirbrakeConfig   `toml:"airbrake"`
 	Chainstore ChainstoreConfig `toml:"chainstore"`
 	Librato    LibratoConfig    `toml:"librato"`
 }
@@ -40,6 +41,7 @@ type ServerConfig struct {
 	LogLevel      string `toml:"log_level"`
 	CacheMaxAge   int    `toml:"cache_max_age"`
 	SizingThruput int    `toml:"sizing_thruput"`
+	TmpDir        string `toml:"tmp_dir"`
 }
 
 type ClusterConfig struct {
@@ -47,8 +49,12 @@ type ClusterConfig struct {
 	Nodes     []string `toml:"nodes"`
 }
 
-type DbConfig struct {
+type DBConfig struct {
 	RedisUri string `toml:"redis_uri"`
+}
+
+type AirbrakeConfig struct {
+	ApiKey string `toml:"api_key"`
 }
 
 type ChainstoreConfig struct {
@@ -107,7 +113,7 @@ func (cf *Config) SetupLogging() {
 }
 
 func (cf *Config) GetDB() (*DB, error) {
-	db, err := NewDB(cf.DbConfig.RedisUri)
+	db, err := NewDB(cf.DB.RedisUri)
 	if err != nil {
 		return nil, err
 	}

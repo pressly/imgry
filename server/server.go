@@ -31,6 +31,10 @@ func (srv *Server) Configure() (err error) {
 
 	srv.Config.SetupLogging()
 
+	if srv.Config.Server.TmpDir != "" {
+		// clear temp directory on start if specified
+	}
+
 	srv.DB, err = srv.Config.GetDB()
 	if err != nil {
 		return err
