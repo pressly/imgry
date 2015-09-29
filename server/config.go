@@ -145,7 +145,7 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 
 	diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
 		metricsmgr.New("fn.store.bolt", nil,
-			boltstore.New(cf.Chainstore.Path, "imgry"),
+			boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
 		),
 	)
 
