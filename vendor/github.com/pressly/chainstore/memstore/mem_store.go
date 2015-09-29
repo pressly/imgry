@@ -6,15 +6,15 @@ import (
 	"github.com/pressly/chainstore/lrumgr"
 )
 
+type memStore struct {
+	sync.Mutex
+	data map[string][]byte
+}
+
 func New(capacity int64) *lrumgr.LruManager {
 	memStore := &memStore{data: make(map[string][]byte, 1000)}
 	store := lrumgr.New(capacity, memStore)
 	return store
-}
-
-type memStore struct {
-	sync.Mutex
-	data map[string][]byte
 }
 
 func (s *memStore) Open() (err error)  { return }
