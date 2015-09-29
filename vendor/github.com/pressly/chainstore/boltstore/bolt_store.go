@@ -3,6 +3,7 @@ package boltstore
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/boltdb/bolt"
 )
@@ -34,7 +35,7 @@ func (s *boltStore) Open() (err error) {
 		}
 	}
 
-	s.db, err = bolt.Open(s.storePath, 0660, nil)
+	s.db, err = bolt.Open(s.storePath, 0660, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return
 	}

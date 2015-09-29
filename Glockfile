@@ -15,6 +15,7 @@ github.com/pressly/go-metrics 5102e4a6cd4b8cfea15ea9fb9e62809cd8372f50
 github.com/pressly/gohttpware bc6e381023a9fc56ecbb7cfaca7e28039662f23b
 github.com/rcrowley/go-metrics dee209f2455f101a5e4e593dea94872d2c62d85d
 github.com/stretchr/testify f5520455607c0233cb6d7b056f71b22c1d265ef1
+github.com/tobi/airbrake-go 5b5e269e1bc398d43f67e43dafff3414a59cd5a2
 github.com/unrolled/render aa61028b1d32873eaa3e261a3ef0e892a153107b
 github.com/vaughan0/go-ini a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
 github.com/zenazn/goji 46b46e00f46dda650e04f0bceeb7c40732cd5988
