@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gographics/imagick/imagick"
@@ -15,11 +17,55 @@ var (
 	ErrEngineFailure  = errors.New("imagick: unable to request a MagickWand")
 )
 
-type Engine struct{}
+type Engine struct {
+	tmpDir string
+}
 
 func (ng Engine) Version() string {
 	v, _ := imagick.GetVersion()
 	return fmt.Sprintf("%s", v)
+}
+
+func (ng Engine) Initialize(tmpDir string) error {
+	if tmpDir != "" {
+		if err := os.MkdirAll(tmpDir, 0755); err != nil {
+			return err
+		}
+		ng.tmpDir = tmpDir
+		os.Setenv("MAGICK_TMPDIR", tmpDir)
+		ng.SweepTmpDir()
+	}
+	imagick.Initialize()
+	return nil
+}
+
+func (ng Engine) Terminate() {
+	imagick.Terminate()
+	ng.SweepTmpDir()
+}
+
+func (ng Engine) SweepTmpDir() error {
+	if ng.tmpDir == "" {
+		return nil
+	}
+	err := filepath.Walk(
+		ng.tmpDir,
+		func(path string, info os.FileInfo, err error) error {
+			if ng.tmpDir == path {
+				return nil // skip the root
+			}
+			if strings.Index(filepath.Base(path), "magick") >= 0 {
+				if err = os.Remove(path); err != nil {
+					return fmt.Errorf("failed to sweet engine tmpdir %s, because: %s", path, err)
+				}
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ng Engine) LoadFile(filename string, srcFormat ...string) (imgry.Image, error) {

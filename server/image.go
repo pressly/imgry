@@ -83,7 +83,7 @@ func (im *Image) LoadImage() (err error) {
 	im.img, err = ng.LoadBlob(im.Data, formatHint)
 	if err != nil {
 		if err == imagick.ErrEngineFailure {
-			lg.Errorf("**** ENGINE FAILURE on %s", im.SrcUrl)
+			lg.Fatalf("**** ENGINE FAILURE on %s", im.SrcUrl)
 		}
 		return err
 	}

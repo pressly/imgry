@@ -3,7 +3,10 @@ package server
 import (
 	"net/http"
 
+	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
+	"github.com/pressly/imgry"
+	"github.com/pressly/imgry/imagick"
 )
 
 var (
@@ -16,7 +19,7 @@ type Server struct {
 	DB          *DB
 	Chainstore  chainstore.Store
 	HttpFetcher *HttpFetcher
-	// TODO: Engine ...
+	ImageEngine imgry.Engine
 }
 
 func New(conf *Config) *Server {
@@ -30,10 +33,6 @@ func (srv *Server) Configure() (err error) {
 	}
 
 	srv.Config.SetupLogging()
-
-	if srv.Config.Server.TmpDir != "" {
-		// clear temp directory on start if specified
-	}
 
 	srv.DB, err = srv.Config.GetDB()
 	if err != nil {
@@ -51,6 +50,12 @@ func (srv *Server) Configure() (err error) {
 
 	srv.HttpFetcher = NewHttpFetcher()
 
+	tmpDir := srv.Config.Server.TmpDir
+	srv.ImageEngine = imagick.Engine{}
+	if err := srv.ImageEngine.Initialize(tmpDir); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -59,6 +64,8 @@ func (srv *Server) NewRouter() http.Handler {
 }
 
 func (srv *Server) Close() {
+	lg.Info("server shutting down...")
+	srv.ImageEngine.Terminate()
 	srv.DB.Close()
 	srv.Chainstore.Close()
 }

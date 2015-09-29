@@ -3,12 +3,22 @@ package imgry
 import "errors"
 
 const (
-	VERSION = "0.14.0"
+	VERSION = "0.15.0"
 )
 
 var (
 	ErrInvalidImageData = errors.New("invalid image data")
 )
+
+type Engine interface {
+	Version() string
+	Initialize(tmpDir string) error
+	Terminate()
+
+	LoadFile(filename string, srcFormat ...string) (Image, error)
+	LoadBlob(b []byte, srcFormat ...string) (Image, error)
+	GetImageInfo(b []byte, srcFormat ...string) (*ImageInfo, error)
+}
 
 type Image interface {
 	Data() []byte

@@ -36,7 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	lg.Infof("** Imgry Server v%s at %s **\n", imgry.VERSION, srv.Config.Server.Addr)
+	lg.Infof("** Imgry Server v%s at %s **", imgry.VERSION, srv.Config.Server.Addr)
 	lg.Infof("** Engine: %s", imagick.Engine{}.Version())
 
 	err = graceful.ListenAndServe(srv.Config.Server.Addr, srv.NewRouter())
