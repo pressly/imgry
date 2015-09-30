@@ -60,7 +60,7 @@ func (s *boltStore) Close() (err error) {
 }
 
 func (s *boltStore) Put(key string, val []byte) (err error) {
-	err = s.db.Update(func(tx *bolt.Tx) error {
+	err = s.db.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket(s.bucketName)
 		return b.Put([]byte(key), val)
 	})
