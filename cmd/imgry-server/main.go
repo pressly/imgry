@@ -8,7 +8,6 @@ import (
 
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
-	"github.com/pressly/imgry/imagick"
 	"github.com/pressly/imgry/server"
 	"github.com/zenazn/goji/graceful"
 )
@@ -28,18 +27,17 @@ func main() {
 	}
 
 	srv := server.New(conf)
-
-	graceful.AddSignal(syscall.SIGINT, syscall.SIGTERM)
-	graceful.PreHook(func() { srv.Close() })
-
 	if err := srv.Configure(); err != nil {
 		log.Fatal(err)
 	}
 
-	lg.Infof("** Imgry Server v%s at %s **", imgry.VERSION, srv.Config.Server.Addr)
-	lg.Infof("** Engine: %s", imagick.Engine{}.Version())
+	lg.Infof("** Imgry Server v%s at %s **", imgry.VERSION, srv.Config.Bind)
+	lg.Infof("** Engine: %s", srv.ImageEngine.Version())
 
-	err = graceful.ListenAndServe(srv.Config.Server.Addr, srv.NewRouter())
+	graceful.AddSignal(syscall.SIGINT, syscall.SIGTERM)
+	graceful.PreHook(func() { srv.Close() })
+
+	err = graceful.ListenAndServe(srv.Config.Bind, srv.NewRouter())
 	if err != nil {
 		lg.Fatal(err.Error())
 	}

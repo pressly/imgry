@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/pprof"
-	"net/url"
 	"time"
 
-	"github.com/goware/lg"
 	"github.com/pressly/cji"
 	"github.com/pressly/consistentrd"
 	"github.com/pressly/gohttpware/heartbeat"
 	"github.com/pressly/imgry"
-	"github.com/rcrowley/go-metrics"
 	"github.com/tobi/airbrake-go"
 	"github.com/unrolled/render"
+	"github.com/zenazn/goji/web"
 	"github.com/zenazn/goji/web/middleware"
+	"golang.org/x/net/context"
 )
 
 func NewRouter() http.Handler {
@@ -28,15 +27,18 @@ func NewRouter() http.Handler {
 	r := cji.NewRouter()
 
 	r.Use(middleware.EnvInit)
+	r.Use(CtxInit(app.Config.Limits.RequestTimeout))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(RequestLogger)
+	// r.Use(RequestLogger)
+	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	if app.Config.Airbrake.ApiKey != "" {
 		r.Use(AirbrakeRecoverer(app.Config.Airbrake.ApiKey))
 	}
 	r.Use(heartbeat.Route("/ping"))
 
+	// if app.Config. // .Profiler { ... }
 	r.Mount("/debug", middleware.NoCache, Profiler())
 
 	r.Get("/", trackRoute("root"), func(w http.ResponseWriter, r *http.Request) {
@@ -63,31 +65,78 @@ func NewRouter() http.Handler {
 	return r
 }
 
-func RequestLogger(next http.Handler) http.Handler {
-	reqCounter := metrics.GetOrRegisterCounter("route.TotalNumRequests", nil)
+func CtxInit(timeout time.Duration) func(c *web.C, next http.Handler) http.Handler {
+	return func(c *web.C, next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var ctx context.Context
+			var cancel context.CancelFunc
 
-	h := func(w http.ResponseWriter, r *http.Request) {
-		reqCounter.Inc(1)
+			if timeout > 0 {
+				ctx, cancel = context.WithTimeout(context.Background(), timeout)
+			} else {
+				ctx, cancel = context.WithCancel(context.Background())
+			}
+			defer cancel()
 
-		u, err := url.QueryUnescape(r.URL.RequestURI())
-		if err != nil {
-			lg.Error(err.Error())
-		}
+			go func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-w.(http.CloseNotifier).CloseNotify():
+					cancel()
+					return
+				}
+			}()
 
-		start := time.Now()
-		lg.Infof("Started %s %s", r.Method, u)
-
-		lw := &loggedResponseWriter{w, -1}
-		next.ServeHTTP(lw, r)
-
-		lg.Infof("Completed (%s): %v %s in %v",
-			u,
-			lw.Status(),
-			http.StatusText(lw.Status()),
-			time.Since(start),
-		)
+			c.Env["ctx"] = ctx
+			next.ServeHTTP(w, r)
+		})
 	}
-	return http.HandlerFunc(h)
+}
+
+// Airbrake recoverer middleware to capture and report any panics to
+// airbrake.io.
+func AirbrakeRecoverer(apiKey string) func(http.Handler) http.Handler {
+	airbrake.ApiKey = apiKey
+	f := func(h http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			if apiKey != "" {
+				defer airbrake.CapturePanic(r)
+			}
+			h.ServeHTTP(w, r)
+		}
+		return http.HandlerFunc(fn)
+	}
+	return f
+}
+
+func Profiler() http.Handler {
+	r := cji.NewRouter()
+	r.Handle("/vars", expVars)
+	r.Handle("/pprof/", pprof.Index)
+	r.Handle("/pprof/cmdline", pprof.Cmdline)
+	r.Handle("/pprof/profile", pprof.Profile)
+	r.Handle("/pprof/symbol", pprof.Symbol)
+	r.Handle("/pprof/block", pprof.Handler("block").ServeHTTP)
+	r.Handle("/pprof/heap", pprof.Handler("heap").ServeHTTP)
+	r.Handle("/pprof/goroutine", pprof.Handler("goroutine").ServeHTTP)
+	r.Handle("/pprof/threadcreate", pprof.Handler("threadcreate").ServeHTTP)
+	return r
+}
+
+// Replicated from expvar.go as not public.
+func expVars(w http.ResponseWriter, r *http.Request) {
+	first := true
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	fmt.Fprintf(w, "{\n")
+	expvar.Do(func(kv expvar.KeyValue) {
+		if !first {
+			fmt.Fprintf(w, ",\n")
+		}
+		first = false
+		fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
+	})
+	fmt.Fprintf(w, "\n}\n")
 }
 
 type Responder struct {
@@ -127,49 +176,4 @@ func (r *Responder) cacheErrors(w http.ResponseWriter, err error) {
 		w.Header().Set("Surrogate-Control", "max-age=300") // 5 minutes
 	default:
 	}
-}
-
-func Profiler() http.Handler {
-	r := cji.NewRouter()
-	r.Handle("/vars", expVars)
-	r.Handle("/pprof/", pprof.Index)
-	r.Handle("/pprof/cmdline", pprof.Cmdline)
-	r.Handle("/pprof/profile", pprof.Profile)
-	r.Handle("/pprof/symbol", pprof.Symbol)
-	r.Handle("/pprof/block", pprof.Handler("block").ServeHTTP)
-	r.Handle("/pprof/heap", pprof.Handler("heap").ServeHTTP)
-	r.Handle("/pprof/goroutine", pprof.Handler("goroutine").ServeHTTP)
-	r.Handle("/pprof/threadcreate", pprof.Handler("threadcreate").ServeHTTP)
-	return r
-}
-
-// Replicated from expvar.go as not public.
-func expVars(w http.ResponseWriter, r *http.Request) {
-	first := true
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	fmt.Fprintf(w, "{\n")
-	expvar.Do(func(kv expvar.KeyValue) {
-		if !first {
-			fmt.Fprintf(w, ",\n")
-		}
-		first = false
-		fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
-	})
-	fmt.Fprintf(w, "\n}\n")
-}
-
-// Airbrake recoverer middleware to capture and report any panics to
-// airbrake.io.
-func AirbrakeRecoverer(apiKey string) func(http.Handler) http.Handler {
-	airbrake.ApiKey = apiKey
-	f := func(h http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			if apiKey != "" {
-				defer airbrake.CapturePanic(r)
-			}
-			h.ServeHTTP(w, r)
-		}
-		return http.HandlerFunc(fn)
-	}
-	return f
 }

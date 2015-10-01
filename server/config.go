@@ -3,7 +3,6 @@ package server
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,94 +21,141 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+type Config struct {
+	Bind        string `toml:"bind"`
+	MaxProcs    int    `toml:"max_procs"`
+	LogLevel    string `toml:"log_level"`
+	CacheMaxAge int    `toml:"cache_max_age"`
+	TmpDir      string `toml:"tmp_dir"`
+	Profiler    bool   `toml:"profiler"`
+
+	// [cluster]
+	Cluster struct {
+		LocalNode string   `toml:"local_node"`
+		Nodes     []string `toml:"nodes"`
+	} `toml:"cluster"`
+
+	// [limits]
+	Limits struct {
+		MaxRequests    int `toml:"max_requests"`
+		BacklogSize    int `toml:"backlog_size"`
+		RequestTimeout time.Duration
+		BacklogTimeout time.Duration
+		HttpFetchers   int `toml:"http_fetchers"`
+		ImageSizings   int `toml:"image_sizings"`
+
+		requestTimeoutStr string `toml:"request_timeout"`
+		backlogTimeoutStr string `toml:"backlog_timeout"`
+	} `toml:"limits"`
+
+	// [db]
+	DB struct {
+		RedisUri string `toml:"redis_uri"`
+	} `toml:"db"`
+
+	// [airbrake]
+	Airbrake struct {
+		ApiKey string `toml:"api_key"`
+	} `toml:"airbrake"`
+
+	// [chainstore]
+	Chainstore struct {
+		Path          string `toml:"path"`
+		MemCacheSize  int64  `toml:"mem_cache_size"`
+		DiskCacheSize int64  `toml:"disk_cache_size"`
+		S3Bucket      string `toml:"s3_bucket"`
+		S3AccessKey   string `toml:"s3_access_key"`
+		S3SecretKey   string `toml:"s3_secret_key"`
+	} `toml:"chainstore"`
+
+	// [librato]
+	Librato struct {
+		Enabled   bool   `toml:"enabled"`
+		Email     string `toml:"email"`
+		Token     string `toml:"token"`
+		Namespace string `toml:"namespace"`
+		Source    string `toml:"source"`
+	} `toml:"librato"`
+}
+
 var (
 	ErrNoConfigFile = errors.New("no configuration file specified")
+
+	DefaultConfig = Config{}
 )
 
-type Config struct {
-	Server     ServerConfig     `toml:"server"`
-	Cluster    ClusterConfig    `toml:"cluster"`
-	DB         DBConfig         `toml:"db"`
-	Airbrake   AirbrakeConfig   `toml:"airbrake"`
-	Chainstore ChainstoreConfig `toml:"chainstore"`
-	Librato    LibratoConfig    `toml:"librato"`
-}
+func init() {
+	cf := Config{
+		Bind:        "0.0.0.0:4446",
+		MaxProcs:    -1,
+		LogLevel:    "INFO",
+		CacheMaxAge: 0,
+		TmpDir:      "",
+		Profiler:    false,
+	}
 
-type ServerConfig struct {
-	Addr          string `toml:"addr"`
-	MaxProcs      int    `toml:"max_procs"`
-	LogLevel      string `toml:"log_level"`
-	CacheMaxAge   int    `toml:"cache_max_age"`
-	SizingThruput int    `toml:"sizing_thruput"`
-	TmpDir        string `toml:"tmp_dir"`
-}
+	cf.Limits.MaxRequests = 1000
+	cf.Limits.BacklogSize = 5000
+	cf.Limits.RequestTimeout = 45 * time.Second
+	cf.Limits.BacklogTimeout = 1000 * time.Millisecond
+	cf.Limits.HttpFetchers = 100
+	cf.Limits.ImageSizings = 20
 
-type ClusterConfig struct {
-	LocalNode string   `toml:"local_node"`
-	Nodes     []string `toml:"nodes"`
-}
-
-type DBConfig struct {
-	RedisUri string `toml:"redis_uri"`
-}
-
-type AirbrakeConfig struct {
-	ApiKey string `toml:"api_key"`
-}
-
-type ChainstoreConfig struct {
-	Path          string `toml:"path"`
-	MemCacheSize  int64  `toml:"mem_cache_size"`
-	DiskCacheSize int64  `toml:"disk_cache_size"`
-	S3Bucket      string `toml:"s3_bucket"`
-	S3AccessKey   string `toml:"s3_access_key"`
-	S3SecretKey   string `toml:"s3_secret_key"`
-}
-
-type LibratoConfig struct {
-	Enabled   bool   `toml:"enabled"`
-	Email     string `toml:"email"`
-	Token     string `toml:"token"`
-	Namespace string `toml:"namespace"`
-	Source    string `toml:"source"`
+	DefaultConfig = cf
 }
 
 func NewConfig() *Config {
-	return &Config{}
+	cf := DefaultConfig
+	return &cf
 }
 
 func NewConfigFromFile(confFile string, confEnv string) (*Config, error) {
-	var cf *Config
 	var err error
 
 	if confFile == "" {
 		confFile = confEnv
 	}
-
 	if _, err = os.Stat(confFile); os.IsNotExist(err) {
 		return nil, ErrNoConfigFile
 	}
 
-	cf = &Config{}
+	cf := NewConfig()
+
 	if _, err = toml.DecodeFile(confFile, &cf); err != nil {
 		return nil, err
 	}
 	return cf, nil
 }
 
-func (cf *Config) SetupRuntime() (err error) {
-	if cf.Server.MaxProcs <= 0 {
-		cf.Server.MaxProcs = runtime.NumCPU()
+func (cf *Config) Apply() (err error) {
+	// runtime
+	if cf.MaxProcs <= 0 {
+		cf.MaxProcs = runtime.NumCPU()
 	}
-	runtime.GOMAXPROCS(cf.Server.MaxProcs)
-	return nil
-}
+	runtime.GOMAXPROCS(cf.MaxProcs)
 
-func (cf *Config) SetupLogging() {
-	err := lg.SetLevelString(strings.ToLower(cf.Server.LogLevel))
-	if err != nil {
-		log.Fatal(err)
+	// logging
+	if err := lg.SetLevelString(strings.ToLower(cf.LogLevel)); err != nil {
+		return err
 	}
+
+	// limits
+	if cf.Limits.requestTimeoutStr != "" {
+		to, err := time.ParseDuration(cf.Limits.requestTimeoutStr)
+		if err != nil {
+			return err
+		}
+		cf.Limits.RequestTimeout = to
+	}
+	if cf.Limits.backlogTimeoutStr != "" {
+		to, err := time.ParseDuration(cf.Limits.backlogTimeoutStr)
+		if err != nil {
+			return err
+		}
+		cf.Limits.BacklogTimeout = to
+	}
+
+	return nil
 }
 
 func (cf *Config) GetDB() (*DB, error) {

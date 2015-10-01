@@ -63,7 +63,7 @@ func BucketGetItem(c web.C, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", im.MimeType())
 	w.Header().Set("X-Meta-Width", fmt.Sprintf("%d", im.Width))
 	w.Header().Set("X-Meta-Height", fmt.Sprintf("%d", im.Height))
-	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.Server.CacheMaxAge))
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.CacheMaxAge))
 
 	// If requested, only return the image details instead of the data
 	if r.URL.Query().Get("info") != "" {
@@ -148,7 +148,7 @@ func GetImageInfo(c web.C, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("X-Meta-Width", fmt.Sprintf("%d", imfo.Width))
 	w.Header().Set("X-Meta-Height", fmt.Sprintf("%d", imfo.Height))
-	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.Server.CacheMaxAge))
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.CacheMaxAge))
 	respond.JSON(w, 200, imfo)
 }
 

@@ -28,11 +28,9 @@ func New(conf *Config) *Server {
 }
 
 func (srv *Server) Configure() (err error) {
-	if err := srv.Config.SetupRuntime(); err != nil {
+	if err := srv.Config.Apply(); err != nil {
 		return err
 	}
-
-	srv.Config.SetupLogging()
 
 	srv.DB, err = srv.Config.GetDB()
 	if err != nil {
@@ -50,7 +48,7 @@ func (srv *Server) Configure() (err error) {
 
 	srv.HttpFetcher = NewHttpFetcher()
 
-	tmpDir := srv.Config.Server.TmpDir
+	tmpDir := srv.Config.TmpDir
 	srv.ImageEngine = imagick.Engine{}
 	if err := srv.ImageEngine.Initialize(tmpDir); err != nil {
 		return err
