@@ -7,11 +7,13 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"golang.org/x/net/context"
+
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
+	"github.com/pressly/chi"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
-	"github.com/zenazn/goji/web"
 )
 
 var (
@@ -28,18 +30,63 @@ var (
 	ErrInvalidURL = errors.New("invalid url")
 )
 
-func BucketGetIndex(c web.C, w http.ResponseWriter, r *http.Request) {
+func BucketGetIndex(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("url") == "" {
 		respond.Data(w, 200, []byte{})
 		return
 	}
-	BucketFetchItem(c, w, r)
+	BucketFetchItem(ctx, w, r)
 }
 
-func BucketGetItem(c web.C, w http.ResponseWriter, r *http.Request) {
+func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
+	if err != nil {
+		respond.ImageError(w, 422, err)
+		return
+	}
+
+	fetchUrl := r.URL.Query().Get("url")
+	if fetchUrl == "" {
+		respond.ImageError(w, 422, ErrInvalidURL)
+		return
+	}
+
+	u, err := urlx.Parse(fetchUrl)
+	if err != nil {
+		respond.ImageError(w, 422, ErrInvalidURL)
+		return
+	}
+	fetchUrl = u.String()
+
+	imKey := sha1Hash(fetchUrl) // transform to what is expected..
+	chi.URLParams(ctx)["key"] = imKey
+
+	// First check if we have the original.. a bit of extra overhead, but its okay
+	_, err = bucket.DbFindImage(imKey, nil) // TODO: pass, ctx for timeout..
+	if err != nil && err != ErrImageNotFound {
+		respond.ImageError(w, 422, err)
+		return
+	}
+
+	// Fetch the image on-demand and add to bucket if we dont have it
+	if err == ErrImageNotFound {
+		// TODO: add image sizing throttler here....
+
+		_, err := bucket.AddImagesFromUrls([]string{fetchUrl}) // TODO: pass ctx
+		if err != nil {
+			lg.Errorf("Fetching failed for %s because %s", fetchUrl, err)
+			respond.ImageError(w, 422, err)
+			return
+		}
+	}
+
+	BucketGetItem(ctx, w, r)
+}
+
+func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	// TODO: bucket binding should happen in a middleware... refactor all handlers
 	// that use it..
-	bucket, err := NewBucket(c.URLParams["bucket"])
+	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
 	if err != nil {
 		lg.Errorf("Failed to create bucket for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
@@ -53,7 +100,7 @@ func BucketGetItem(c web.C, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	im, err := bucket.GetImageSize(c.URLParams["key"], sizing)
+	im, err := bucket.GetImageSize(chi.URLParams(ctx)["key"], sizing)
 	if err != nil {
 		lg.Errorf("Failed to get image for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
@@ -76,54 +123,9 @@ func BucketGetItem(c web.C, w http.ResponseWriter, r *http.Request) {
 	respond.Data(w, 200, im.Data)
 }
 
-func BucketFetchItem(c web.C, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(c.URLParams["bucket"])
-	if err != nil {
-		respond.ImageError(w, 422, err)
-		return
-	}
-
-	fetchUrl := r.URL.Query().Get("url")
-	if fetchUrl == "" {
-		respond.ImageError(w, 422, ErrInvalidURL)
-		return
-	}
-
-	u, err := urlx.Parse(fetchUrl)
-	if err != nil {
-		respond.ImageError(w, 422, ErrInvalidURL)
-		return
-	}
-	fetchUrl = u.String()
-
-	imKey := sha1Hash(fetchUrl) // transform to what is expected..
-	c.URLParams["key"] = imKey
-
-	// First check if we have the original.. a bit of extra overhead, but its okay
-	_, err = bucket.DbFindImage(imKey, nil)
-	if err != nil && err != ErrImageNotFound {
-		respond.ImageError(w, 422, err)
-		return
-	}
-
-	// lg.Infof("BucketFetchItem, after DbFindImage... %v", err)
-
-	// Fetch the image on-demand and add to bucket if we dont have it
-	if err == ErrImageNotFound {
-		_, err := bucket.AddImagesFromUrls([]string{fetchUrl})
-		if err != nil {
-			lg.Errorf("Fetching failed for %s because %s", fetchUrl, err)
-			respond.ImageError(w, 422, err)
-			return
-		}
-	}
-
-	BucketGetItem(c, w, r)
-}
-
 // TODO: this can be optimized significantly..........
 // Ping / DecodeConfig ... do we have to use image magick.......?
-func GetImageInfo(c web.C, w http.ResponseWriter, r *http.Request) {
+func GetImageInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
 	if url == "" {
 		respond.ApiError(w, 422, errors.New("no image url"))
@@ -155,7 +157,7 @@ func GetImageInfo(c web.C, w http.ResponseWriter, r *http.Request) {
 // Image upload to an s3 bucket, respond with a direct url to the uploaded
 // image. Avoid using respond.ApiError() here to prevent any of the responses
 // from being cached.
-func BucketImageUpload(c web.C, w http.ResponseWriter, r *http.Request) {
+func BucketImageUpload(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var url string
 	var err error
 	var data []byte
@@ -209,7 +211,7 @@ func BucketImageUpload(c web.C, w http.ResponseWriter, r *http.Request) {
 		app.Config.Chainstore.S3SecretKey,
 		app.Config.Chainstore.S3Bucket)
 
-	path := s3Path(c.URLParams["bucket"], im.Data, im.Format)
+	path := s3Path(chi.URLParams(ctx)["bucket"], im.Data, im.Format)
 
 	url, err = s3Upload(s3Bucket, path, im)
 	if err != nil {
@@ -230,8 +232,8 @@ func BucketImageUpload(c web.C, w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, 200, imfo)
 }
 
-func BucketAddItems(c web.C, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(c.URLParams["bucket"])
+func BucketAddItems(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
 	if err != nil {
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return
@@ -260,8 +262,8 @@ func BucketAddItems(c web.C, w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, 200, images)
 }
 
-func BucketDeleteItem(c web.C, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(c.URLParams["bucket"])
+func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
 	if err != nil {
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return
@@ -270,9 +272,9 @@ func BucketDeleteItem(c web.C, w http.ResponseWriter, r *http.Request) {
 	pUrl := r.URL.Query().Get("url")
 	if pUrl != "" {
 		pKey := sha1Hash(pUrl) // transform to what is expected..
-		c.URLParams["key"] = pKey
+		chi.URLParams(ctx)["key"] = pKey
 	}
-	imageKey := c.URLParams["key"]
+	imageKey := chi.URLParams(ctx)["key"]
 	if imageKey == "" {
 		respond.JSON(w, 422, map[string]interface{}{
 			"error": "Unable to determine the key for the delete operation",
@@ -290,10 +292,7 @@ func BucketDeleteItem(c web.C, w http.ResponseWriter, r *http.Request) {
 }
 
 // DEPRECATED
-func BucketV0FetchItem(c web.C, w http.ResponseWriter, r *http.Request) {
-	if c.URLParams == nil {
-		c.URLParams = make(map[string]string)
-	}
-	c.URLParams["bucket"] = "tmp" // we imply the bucket name..
-	BucketFetchItem(c, w, r)
+func BucketV0FetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	chi.URLParams(ctx)["bucket"] = "tmp" // we imply the bucket name..
+	BucketFetchItem(ctx, w, r)
 }

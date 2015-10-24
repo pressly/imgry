@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"syscall"
+	"time"
 
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
@@ -35,7 +36,9 @@ func main() {
 	lg.Infof("** Engine: %s", srv.ImageEngine.Version())
 
 	graceful.AddSignal(syscall.SIGINT, syscall.SIGTERM)
-	graceful.PreHook(func() { srv.Close() })
+	graceful.Timeout(30 * time.Second)
+	graceful.PreHook(srv.Close)
+	graceful.PostHook(srv.Shutdown)
 
 	err = graceful.ListenAndServe(srv.Config.Bind, srv.NewRouter())
 	if err != nil {

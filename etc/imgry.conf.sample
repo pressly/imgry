@@ -1,40 +1,40 @@
-bind            = "0.0.0.0:4446"
-max_procs       = -1
-log_level       = "INFO"
-cache_max_age   = 14400 # 4 hours
-tmp_dir         = "/tmp/imgry" # inform image engine to use this directory for temp resources
-profiler        = false
+bind             = "0.0.0.0:4446"
+max_procs        = -1
+log_level        = "INFO"          # DEBUG > INFO > WARN > ERROR > FATAL > PANIC
+cache_max_age    = 14400           # 4 hours
+tmp_dir          = "/tmp/imgry"    # inform image engine to use this directory for temp resources
+profiler         = false           # enabled /debug/pprof profiling endpoints
 
 [cluster]
-local_node      = "http://127.0.0.1:4446"
-nodes           = [ "http://127.0.0.1:4446" ]
-# nodes           = [ "http://127.0.0.1:4446", "http://127.0.0.1:4447", "http://127.0.0.1:4448" ]
+local_node       = "http://127.0.0.1:4446"
+nodes            = [ "http://127.0.0.1:4446" ]
+# nodes            = [ "http://127.0.0.1:4446", "http://127.0.0.1:4447", "http://127.0.0.1:4448" ]
 
 [limits]
-max_requests    = 1000
-backlog_size    = 5000
-request_timeout = "45s"
-backlog_timeout = "1000ms"
-http_fetchers   = 100
-image_sizings   = 20
+max_requests     = 1000      # request throughput (/sec)
+backlog_size     = 5000      # backlog capacity
+request_timeout  = "45s"     # global request timeout
+backlog_timeout  = "1500ms"  # backlog wait period
+max_fetchers     = 100       # num of parallel http fetchers
+max_image_sizers = 20        # num of parallel image sizers
 
 [db]
-redis_uri       = "0.0.0.0:6379"
+redis_uri        = "0.0.0.0:6379"
 
 [airbrake]
-api_key         = ""
+api_key          = ""
 
 [chainstore]
-path            = "/tmp/imgry/"
-mem_cache_size  = 100
-disk_cache_size = 500
-s3_bucket       = "imgry-dev"
-s3_access_key   = ""
-s3_secret_key   = ""
+path             = "/tmp/imgry/"
+mem_cache_size   = 100
+disk_cache_size  = 500
+s3_bucket        = "imgry-dev"
+s3_access_key    = ""
+s3_secret_key    = ""
 
 [librato]
-enabled         = false
-email           = ""
-token           = ""
-namespace       = "imgry"
-source          = "imgry-dev"
+enabled          = false
+email            = ""
+token            = ""
+namespace        = "imgry"
+source           = "imgry-dev"

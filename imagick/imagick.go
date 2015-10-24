@@ -19,6 +19,13 @@ var (
 
 type Engine struct {
 	tmpDir string
+	// TODO: perhaps we have counter of wands here..
+	// it ensures we'll always release them..
+	// AvailableWands .. .. set to MaxSizers ..
+	// then, NewMagickWand() will limit, or error..
+	// perhaps we make a channel of these things..
+	// then block.. + ctx will have a timeout if it wants to stop waiting..
+	// we can log these timeouts etc..
 }
 
 func (ng Engine) Version() string {

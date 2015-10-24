@@ -6,6 +6,10 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
+// TODO: take options ..
+// imgry: nocompression
+// .. others...?
+
 type levelStore struct {
 	storePath string
 	db        *leveldb.DB

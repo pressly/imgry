@@ -4,12 +4,11 @@ import (
 	"crypto/md5"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
-	"github.com/rcrowley/go-metrics"
-	"github.com/zenazn/goji/web"
+	"github.com/pressly/imgry"
+	"github.com/unrolled/render"
 )
 
 func getS3Bucket(accessKey, secretKey, bucket string) *s3.Bucket {
@@ -38,36 +37,41 @@ func s3Upload(bucket *s3.Bucket, path string, im *Image) (string, error) {
 	return url, nil
 }
 
-type loggedResponseWriter struct {
-	http.ResponseWriter
-	status int
+type Responder struct {
+	*render.Render
 }
 
-func (l *loggedResponseWriter) WriteHeader(status int) {
-	l.status = status
-	l.ResponseWriter.WriteHeader(status)
+func NewResponder() *Responder {
+	return &Responder{render.New(render.Options{})}
 }
 
-func (l *loggedResponseWriter) Status() int {
-	return l.status
+func (r *Responder) ImageError(w http.ResponseWriter, status int, err error) {
+	if err == nil {
+		r.Data(w, status, []byte{})
+		return
+	}
+
+	r.cacheErrors(w, err)
+	w.Header().Set("X-Err", err.Error())
+	r.Data(w, status, []byte{})
 }
 
-func trackRoute(metricID string) func(*web.C, http.Handler) http.Handler {
-	return func(c *web.C, h http.Handler) http.Handler {
-		route := fmt.Sprintf("route.%s", metricID)
-		routeTimer := metrics.GetOrRegisterTimer(route, nil)
-		errCounter := metrics.GetOrRegisterCounter(fmt.Sprintf("%s-err", route), nil)
-		handler := func(w http.ResponseWriter, r *http.Request) {
-			reqStart := time.Now()
+func (r *Responder) ApiError(w http.ResponseWriter, status int, err error) {
+	if err == nil {
+		r.JSON(w, status, []byte{})
+		return
+	}
 
-			lw := &loggedResponseWriter{w, -1}
-			h.ServeHTTP(lw, r)
+	r.cacheErrors(w, err)
+	r.JSON(w, status, map[string]interface{}{"error": err.Error()})
+}
 
-			routeTimer.UpdateSince(reqStart)
-			if lw.Status() >= 400 {
-				errCounter.Inc(1)
-			}
-		}
-		return http.HandlerFunc(handler)
+func (r *Responder) cacheErrors(w http.ResponseWriter, err error) {
+	switch err {
+	case imgry.ErrInvalidImageData, ErrInvalidURL:
+		// For invalid inputs, we tell the surrogate to cache the
+		// error for a small amount of time.
+		w.Header().Set("Surrogate-Control", "max-age=300") // 5 minutes
+	default:
 	}
 }

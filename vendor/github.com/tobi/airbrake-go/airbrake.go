@@ -2,9 +2,11 @@ package airbrake
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -12,6 +14,7 @@ import (
 	"runtime"
 	"sync"
 	"text/template"
+	"time"
 )
 
 var (
@@ -103,7 +106,23 @@ func post(params map[string]interface{}) error {
 		log.Printf("Airbrake payload for endpoint %s: %s", Endpoint, buffer)
 	}
 
-	response, err := http.Post(Endpoint, "text/xml", buffer)
+	var httpClient = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+			TLSClientConfig: &tls.Config{
+				ClientSessionCache: tls.NewLRUClientSessionCache(1024),
+			},
+			MaxIdleConnsPerHost:   100,
+			ResponseHeaderTimeout: 10 * time.Second,
+		},
+		Timeout: 10 * time.Second,
+	}
+	response, err := httpClient.Post(Endpoint, "text/xml", buffer)
 	if err != nil {
 		log.Printf("Airbrake error: %s", err)
 		return err

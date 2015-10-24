@@ -15,7 +15,7 @@ var (
 	ErrImageNotFound   = errors.New("image not found")
 	ErrInvalidBucketID = errors.New("invalid bucket id - must be: [a-z0-9_:-] max-length: 40")
 
-	// TODO: BucketIDValidator regexp here...
+	BucketIDInvalidator = regexp.MustCompile(`(i?)[^a-z0-9\/_\-:\.]`)
 )
 
 // TODO: unexport all of the Db methods...
@@ -36,17 +36,16 @@ func (b *Bucket) ValidID() (bool, error) {
 	if b.ID == "" || len(b.ID) > 40 {
 		return false, ErrInvalidBucketID
 	} else {
-		m, _ := regexp.MatchString(`(i?)[^a-z0-9\/_\-:\.]`, b.ID)
-		if !m {
-			return true, nil
-		} else {
+		if BucketIDInvalidator.MatchString(b.ID) {
 			return false, ErrInvalidBucketID
+		} else {
+			return true, nil
 		}
 	}
 }
 
 func (b *Bucket) AddImagesFromUrls(urls []string) ([]*Image, error) {
-	responses, err := app.HttpFetcher.GetAll(urls)
+	responses, err := app.HttpFetcher.GetAll(urls) // TODO: pass ctx
 	if err != nil {
 		return nil, err
 	}
@@ -74,14 +73,14 @@ func (b *Bucket) AddImagesFromUrls(urls []string) ([]*Image, error) {
 // TODO: .. how do handle errors here... ? each image would
 // have it's own error .. should we put an Err on each image object...?
 // or return an errList ..
-func (b *Bucket) AddImages(images []*Image) (err error) {
+func (b *Bucket) AddImages(images []*Image) (err error) { // TODO: ctx
 	for _, i := range images {
 		err = b.AddImage(i)
 	}
 	return err
 }
 
-func (b *Bucket) AddImage(i *Image) (err error) {
+func (b *Bucket) AddImage(i *Image) (err error) { // TODO: ctx
 	if !i.IsValidImage() || len(i.Data) == 0 {
 		return imgry.ErrInvalidImageData
 	}
@@ -108,12 +107,12 @@ func (b *Bucket) AddImage(i *Image) (err error) {
 	return
 }
 
-func (b *Bucket) GetImageSize(key string, sizing *imgry.Sizing) (*Image, error) {
+func (b *Bucket) GetImageSize(key string, sizing *imgry.Sizing) (*Image, error) { // TODO: ctx
 	m := metrics.GetOrRegisterTimer("fn.bucket.GetImageSize", nil)
 	defer m.UpdateSince(time.Now())
 
 	// Find the original image
-	origIm, err := b.DbFindImage(key, nil)
+	origIm, err := b.DbFindImage(key, nil) // TODO: ctx
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +124,7 @@ func (b *Bucket) GetImageSize(key string, sizing *imgry.Sizing) (*Image, error) 
 	sizing.Size.Height = sizing.GranularizedHeight()
 
 	// Find the specific size
-	im, err := b.DbFindImage(key, sizing)
+	im, err := b.DbFindImage(key, sizing) // TODO: ctx
 	if err != nil && err != ErrImageNotFound {
 		return nil, err
 	}
@@ -140,12 +139,12 @@ func (b *Bucket) GetImageSize(key string, sizing *imgry.Sizing) (*Image, error) 
 		return nil, err
 	}
 
-	err = b.DbSaveImage(im2, sizing)
+	err = b.DbSaveImage(im2, sizing) // TODO: ctx
 	return im2, err
 }
 
 // Loads the image from our table+data store with optional sizing
-func (b *Bucket) DbFindImage(key string, optSizing ...*imgry.Sizing) (*Image, error) {
+func (b *Bucket) DbFindImage(key string, optSizing ...*imgry.Sizing) (*Image, error) { // TODO: ctx
 	m := metrics.GetOrRegisterTimer("fn.bucket.DbFindImage", nil)
 	defer m.UpdateSince(time.Now())
 
@@ -165,7 +164,7 @@ func (b *Bucket) DbFindImage(key string, optSizing ...*imgry.Sizing) (*Image, er
 		return nil, ErrImageNotFound
 	}
 
-	data, err := app.Chainstore.Get(idxKey)
+	data, err := app.Chainstore.Get(idxKey) // TODO: pass ctx
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +187,7 @@ func (b *Bucket) DbSaveImage(im *Image, sizing *imgry.Sizing) (err error) {
 
 	idxKey := b.DbIndexKey(im.Key, sizing)
 
-	err = app.Chainstore.Put(idxKey, im.Data)
+	err = app.Chainstore.Put(idxKey, im.Data) // TODO: pass ctx
 	if err != nil {
 		return
 	}
@@ -197,7 +196,7 @@ func (b *Bucket) DbSaveImage(im *Image, sizing *imgry.Sizing) (err error) {
 }
 
 // TODO: should delete on *
-func (b *Bucket) DbDelImage(key string) (err error) {
+func (b *Bucket) DbDelImage(key string) (err error) { // TODO: ctx
 	idxKey := b.DbIndexKey(key, nil)
 
 	err = app.DB.Del(idxKey) // + "*")

@@ -41,11 +41,11 @@ type Config struct {
 		BacklogSize    int `toml:"backlog_size"`
 		RequestTimeout time.Duration
 		BacklogTimeout time.Duration
-		HttpFetchers   int `toml:"http_fetchers"`
-		ImageSizings   int `toml:"image_sizings"`
+		MaxFetchers    int `toml:"max_fetchers"`
+		MaxImageSizers int `toml:"max_image_sizers"`
 
-		requestTimeoutStr string `toml:"request_timeout"`
-		backlogTimeoutStr string `toml:"backlog_timeout"`
+		RequestTimeoutStr string `toml:"request_timeout"`
+		BacklogTimeoutStr string `toml:"backlog_timeout"`
 	} `toml:"limits"`
 
 	// [db]
@@ -97,9 +97,9 @@ func init() {
 	cf.Limits.MaxRequests = 1000
 	cf.Limits.BacklogSize = 5000
 	cf.Limits.RequestTimeout = 45 * time.Second
-	cf.Limits.BacklogTimeout = 1000 * time.Millisecond
-	cf.Limits.HttpFetchers = 100
-	cf.Limits.ImageSizings = 20
+	cf.Limits.BacklogTimeout = 1500 * time.Millisecond
+	cf.Limits.MaxFetchers = 100
+	cf.Limits.MaxImageSizers = 20
 
 	DefaultConfig = cf
 }
@@ -140,15 +140,15 @@ func (cf *Config) Apply() (err error) {
 	}
 
 	// limits
-	if cf.Limits.requestTimeoutStr != "" {
-		to, err := time.ParseDuration(cf.Limits.requestTimeoutStr)
+	if cf.Limits.RequestTimeoutStr != "" {
+		to, err := time.ParseDuration(cf.Limits.RequestTimeoutStr)
 		if err != nil {
 			return err
 		}
 		cf.Limits.RequestTimeout = to
 	}
-	if cf.Limits.backlogTimeoutStr != "" {
-		to, err := time.ParseDuration(cf.Limits.backlogTimeoutStr)
+	if cf.Limits.BacklogTimeoutStr != "" {
+		to, err := time.ParseDuration(cf.Limits.BacklogTimeoutStr)
 		if err != nil {
 			return err
 		}

@@ -20,6 +20,13 @@ var (
 	DefaultHttpFetcherReqNumAttempts = 2
 )
 
+// TODO: switch to ctxhttp .. why not..
+
+// TODO: rename to just Fetcher
+
+// TODO: get Throughput from app.Config.Limits.MaxFetchers
+// ........
+
 type HttpFetcher struct {
 	Client    *http.Client
 	Transport *http.Transport
@@ -29,6 +36,7 @@ type HttpFetcher struct {
 	HostKeepAlive  time.Duration
 
 	// TODO: lru cache of responses.. like a reverse cache.. including bad urls.. 404s, etc...
+	// hmm.. transport for httpcaching ...
 }
 
 // TODO: keep-alives / persistent connections

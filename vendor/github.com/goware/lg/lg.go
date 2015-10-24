@@ -1,14 +1,32 @@
 package lg
 
 import (
+	"fmt"
 	"io"
 	stdlog "log"
+	"runtime"
 
 	"github.com/Sirupsen/logrus"
 )
 
+// lg package wraps logrus to allow us to use `lg.X` in our app code.
+type (
+	Fields logrus.Fields
+	Level  logrus.Level
+)
+
 var (
-	Logger *logrus.Logger
+	Logger  *logrus.Logger
+	AlertFn func(level Level, msg string)
+)
+
+const (
+	PanicLevel Level = iota
+	FatalLevel
+	ErrorLevel
+	WarnLevel
+	InfoLevel
+	DebugLevel
 )
 
 func init() {
@@ -32,10 +50,6 @@ func (l *logRedirectWriter) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
-
-// lg pacakge wraps logrus to allow us to use `lg.X` in our app code.
-
-type Fields logrus.Fields
 
 func StandardLogger() *logrus.Logger {
 	return Logger
@@ -124,13 +138,30 @@ func Error(args ...interface{}) {
 	Logger.Error(args...)
 }
 
-// Panic logs a message at level Panic on the standard logger.
+// Alert logs a message at level Error on the standard logger and fires AlertFn().
+func Alert(args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
+	}
+	Logger.Error(args...)
+}
+
+// Panic logs a message at level Panic on the standard logger and fires AlertFn().
 func Panic(args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
+	}
 	Logger.Panic(args...)
 }
 
-// Fatal logs a message at level Fatal on the standard logger.
+// Fatal logs a message at level Fatal on the standard logger and fires AlertFn().
 func Fatal(args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
+	}
 	Logger.Fatal(args...)
 }
 
@@ -164,13 +195,30 @@ func Errorf(format string, args ...interface{}) {
 	Logger.Errorf(format, args...)
 }
 
-// Panicf logs a message at level Panic on the standard logger.
+// Alertf logs a message at level Error on the standard logger and fires AlertFn().
+func Alertf(format string, args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
+	}
+	Logger.Errorf(format, args...)
+}
+
+// Panicf logs a message at level Panic on the standard logger and fires AlertFn().
 func Panicf(format string, args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
+	}
 	Logger.Panicf(format, args...)
 }
 
-// Fatalf logs a message at level Fatal on the standard logger.
+// Fatalf logs a message at level Fatal on the standard logger. and fires AlertFn()
 func Fatalf(format string, args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
+	}
 	Logger.Fatalf(format, args...)
 }
 
@@ -204,12 +252,29 @@ func Errorln(args ...interface{}) {
 	Logger.Errorln(args...)
 }
 
-// Panicln logs a message at level Panic on the standard logger.
+// Alertln logs a message at level Error on the standard logger and fires AlertFn().
+func Alertln(args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
+	}
+	Logger.Errorln(args...)
+}
+
+// Panicln logs a message at level Panic on the standard logger and fires AlertFn().
 func Panicln(args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
+	}
 	Logger.Panicln(args...)
 }
 
-// Fatalln logs a message at level Fatal on the standard logger.
+// Fatalln logs a message at level Fatal on the standard logger and fires AlertFn()
 func Fatalln(args ...interface{}) {
+	if AlertFn != nil {
+		_, file, line, _ := runtime.Caller(1)
+		go AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
+	}
 	Logger.Fatalln(args...)
 }
