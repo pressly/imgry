@@ -6,12 +6,9 @@ import (
 	"sync"
 
 	"github.com/pressly/chainstore"
-	"golang.org/x/net/context"
 )
 
-var _ = chainstore.Store(&lruManager{})
-
-type lruManager struct {
+type LruManager struct {
 	sync.Mutex
 
 	store    chainstore.Store
@@ -28,8 +25,9 @@ type lruItem struct {
 	listElement *list.Element
 }
 
-func newLruManager(capacity int64, store chainstore.Store) *lruManager {
-	return &lruManager{
+// TODO: should lruManager support a chain of passed stores..?
+func New(capacity int64, store chainstore.Store) *LruManager {
+	return &LruManager{
 		store:    store,
 		capacity: capacity,
 		cushion:  int64(float64(capacity) * 0.1),
@@ -38,13 +36,7 @@ func newLruManager(capacity int64, store chainstore.Store) *lruManager {
 	}
 }
 
-// New creates and returns a LRU backed store.
-func New(capacity int64, store chainstore.Store) chainstore.Store {
-	return newLruManager(capacity, store)
-}
-
-func (m *lruManager) Open() (err error) {
-
+func (m *LruManager) Open() (err error) {
 	if m.capacity < 10 {
 		return errors.New("Invalid capacity, must be >= 10 bytes")
 	}
@@ -61,101 +53,87 @@ func (m *lruManager) Open() (err error) {
 	return
 }
 
-func (m *lruManager) Close() (err error) {
+func (m *LruManager) Close() (err error) {
 	return m.store.Close()
 }
 
-func (m *lruManager) Put(ctx context.Context, key string, val []byte) (err error) {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		defer m.prune(ctx) // free up space
-		valSize := int64(len(val))
+func (m *LruManager) Put(key string, val []byte) (err error) {
+	defer m.prune() // free up space
 
-		m.Lock()
-		if item, exists := m.items[key]; exists {
-			m.list.MoveToFront(item.listElement)
-			m.capacity += (item.size - valSize)
-			item.size = valSize
-			// m.promote(item)
-		} else {
-			m.addItem(key, valSize)
-		}
-		m.Unlock()
+	valSize := int64(len(val))
 
-		// TODO: what if the value is larger then even the initial capacity?
-		// ..error..
-		return m.store.Put(ctx, key, val)
+	m.Lock()
+	if item, exists := m.items[key]; exists {
+		m.list.MoveToFront(item.listElement)
+		m.capacity += (item.size - valSize)
+		item.size = valSize
+		// m.promote(item)
+	} else {
+		m.addItem(key, valSize)
 	}
+	m.Unlock()
+
+	// TODO: what if the value is larger then even the initial capacity?
+	// ..error..
+	return m.store.Put(key, val)
 }
 
-func (m *lruManager) Get(ctx context.Context, key string) (val []byte, err error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-		val, err = m.store.Get(ctx, key)
-		valSize := len(val)
+func (m *LruManager) Get(key string) (val []byte, err error) {
+	val, err = m.store.Get(key)
+	valSize := len(val)
 
-		m.Lock()
-		if item, exists := m.items[key]; exists {
-			// m.promote(item)
-			m.list.MoveToFront(item.listElement)
-		} else if valSize > 0 {
-			m.addItem(key, int64(valSize))
-		}
-		m.Unlock()
-		return
+	m.Lock()
+	if item, exists := m.items[key]; exists {
+		// m.promote(item)
+		m.list.MoveToFront(item.listElement)
+	} else if valSize > 0 {
+		m.addItem(key, int64(valSize))
 	}
+	m.Unlock()
+
+	return
 }
 
-func (m *lruManager) Del(ctx context.Context, key string) (err error) {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		m.Lock()
-
-		if item, exists := m.items[key]; exists {
-			m.evict(item)
-		}
-		m.Unlock()
-
-		return m.store.Del(ctx, key)
+func (m *LruManager) Del(key string) (err error) {
+	m.Lock()
+	if item, exists := m.items[key]; exists {
+		m.evict(item)
 	}
+	m.Unlock()
+
+	return m.store.Del(key)
 }
 
-func (m *lruManager) Capacity() int64 {
+func (m *LruManager) Capacity() int64 {
 	m.Lock()
 	defer m.Unlock()
 	return m.capacity
 }
 
-func (m *lruManager) Cushion() int64 {
+func (m *LruManager) Cushion() int64 {
 	return m.cushion
 }
 
-func (m *lruManager) NumItems() int {
+func (m *LruManager) NumItems() int {
 	m.Lock()
 	defer m.Unlock()
 	return m.list.Len()
 }
 
-func (m *lruManager) addItem(key string, size int64) {
+func (m *LruManager) addItem(key string, size int64) {
 	item := &lruItem{key: key, size: size}
 	item.listElement = m.list.PushFront(item)
 	m.items[key] = item
 	m.capacity -= size
 }
 
-func (m *lruManager) evict(item *lruItem) {
+func (m *LruManager) evict(item *lruItem) {
 	m.list.Remove(item.listElement)
 	delete(m.items, item.key)
 	m.capacity += item.size
 }
 
-func (m *lruManager) prune(ctx context.Context) {
+func (m *LruManager) prune() {
 	if m.capacity > 0 {
 		return
 	}
@@ -169,6 +147,10 @@ func (m *lruManager) prune(ctx context.Context) {
 		item := tail.Value.(*lruItem)
 		m.Unlock()
 
-		m.Del(ctx, item.key)
+		m.Del(item.key)
 	}
+
+	// if m.capacity < 0 {
+	// 	m.prune()
+	// }
 }

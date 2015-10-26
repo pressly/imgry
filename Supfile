@@ -58,7 +58,7 @@ commands:
 
   tail-logs:
     desc: Tail Docker logs
-    run: sudo docker logs --tail=20 -f $NAME
+    run: sudo docker logs --tail=20 -f $NAME 2>&1
 
   health:
     desc: Application health check

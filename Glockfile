@@ -10,8 +10,8 @@ github.com/goware/lg df2bea9a1d3c78d2bf9623a7b18b293f2106ded8
 github.com/goware/urlx 6292537e62efc11517f237ed166bd105c6b44aa8
 github.com/mitchellh/goamz caaaea8b30ee15616494ee68abd5d8ebbbef05cf
 github.com/opennota/urlesc 5fa9ff0392746aeae1c4b37fcc42c65afa7a9587
-github.com/pressly/chainstore d89aea551a426f106dcf64cf9efe9cc639a70ff6
-github.com/pressly/chi 6cdb0fa9e298c912a8a9382e461066d2fa5fc36e
+github.com/pressly/chainstore 907f0f81699a835e86a81f11a3d3cd4d7215c360
+github.com/pressly/chi e135f36c819d75a0d55d95b1c6e2c6faf132dafa
 github.com/pressly/consistentrd 43f3d1020fc03cf1271313ec9b95c8a967c0b878
 github.com/pressly/go-metrics 5102e4a6cd4b8cfea15ea9fb9e62809cd8372f50
 github.com/rcrowley/go-metrics 1ce93efbc8f9c568886b2ef85ce305b2217b3de3

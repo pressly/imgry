@@ -1,41 +1,35 @@
-package filestore
+package filestore_test
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/pressly/chainstore"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
+	"github.com/pressly/chainstore/filestore"
+	. "github.com/smartystreets/goconvey/convey"
 )
-
-func tempDir() string {
-	path, _ := ioutil.TempDir("", "chainstore-")
-	return path
-}
 
 func TestFileStore(t *testing.T) {
 	var store chainstore.Store
 	var err error
 
-	ctx := context.Background()
+	Convey("Fsdb Open", t, func() {
+		store = filestore.New(chainstore.TempDir(), 0755)
+		err = nil
+		So(err, ShouldEqual, nil)
 
-	store = chainstore.New(New(tempDir(), 0755))
+		Convey("Put/Get/Del basic data", func() {
+			err = store.Put("test.txt", []byte{1, 2, 3, 4})
+			So(err, ShouldEqual, nil)
 
-	assert := assert.New(t)
+			data, err := store.Get("test.txt")
+			So(err, ShouldEqual, nil)
+			So(data, ShouldResemble, []byte{1, 2, 3, 4})
+		})
 
-	err = store.Open()
-	assert.Nil(err)
+		Convey("Auto-creating directories on put", func() {
+			err = store.Put("hello/there/everyone.txt", []byte{1, 2, 3, 4})
+			So(err, ShouldEqual, nil)
+		})
 
-	// Put/Get/Del basic data
-	err = store.Put(ctx, "test.txt", []byte{1, 2, 3, 4})
-	assert.Nil(err)
-
-	data, err := store.Get(ctx, "test.txt")
-	assert.Nil(err)
-	assert.Equal(data, []byte{1, 2, 3, 4})
-
-	// Auto-creating directories on put
-	err = store.Put(ctx, "hello/there/everyone.txt", []byte{1, 2, 3, 4})
-	assert.Nil(err)
+	})
 }

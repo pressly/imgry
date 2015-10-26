@@ -1,37 +1,32 @@
-package memstore
+package memstore_test
 
 import (
 	"testing"
 
 	"github.com/pressly/chainstore"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
+	"github.com/pressly/chainstore/memstore"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestMemCacheStore(t *testing.T) {
 	var store chainstore.Store
-	var err error
-	var obj []byte
+	store = memstore.New(10)
 
-	ctx := context.Background()
+	Convey("MemCacheStore", t, func() {
+		e := store.Put("hi", []byte{1, 2, 3})
+		So(e, ShouldEqual, nil)
 
-	store = chainstore.New(New(10))
+		obj, e := store.Get("hi")
+		So(e, ShouldEqual, nil)
+		So(obj, ShouldResemble, []byte{1, 2, 3})
 
-	assert := assert.New(t)
+		e = store.Put("bye", []byte{5, 6, 7, 8, 9, 10, 11, 12})
+		So(e, ShouldEqual, nil)
 
-	err = store.Put(ctx, "hi", []byte{1, 2, 3})
-	assert.Nil(err)
+		obj, e = store.Get("hi")
+		So(len(obj), ShouldEqual, 0)
+		obj, e = store.Get("bye")
+		So(len(obj), ShouldEqual, 8)
+	})
 
-	obj, err = store.Get(ctx, "hi")
-	assert.Nil(err)
-	assert.Equal(obj, []byte{1, 2, 3})
-
-	err = store.Put(ctx, "bye", []byte{5, 6, 7, 8, 9, 10, 11, 12})
-	assert.Nil(err)
-
-	obj, err = store.Get(ctx, "hi")
-	assert.Equal(len(obj), 0)
-
-	obj, err = store.Get(ctx, "bye")
-	assert.Equal(len(obj), 8)
 }

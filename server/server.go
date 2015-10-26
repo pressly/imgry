@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/goware/heartbeat"
+	"github.com/goware/httpcoala"
 	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chi"
@@ -99,7 +100,7 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
-	// r.Use(httpcoala.Route("HEAD", "GET"))
+	r.Use(httpcoala.Route("HEAD", "GET"))
 
 	r.Use(heartbeat.Route("/ping"))
 	r.Use(heartbeat.Route("/favicon.ico"))
