@@ -20,7 +20,7 @@ Open browser to:
 `http://localhost:4446/mybucket?url=http://i.imgur.com/vEZy2Oh.jpg`
 
 this will download the image from the source, cache it, persist it,
-and return the sized image (in this case, with zero sizing) to the client. 
+and return the sized image (in this case, with zero sizing) to the client.
 
 **Now, some other variations:**
 
@@ -76,8 +76,23 @@ with an ImageMagick engine by default (`imgry/imagick`)
 
 ## License
 
-Imgry is written and maintained by Peter Kieltyka (peter@pressly.com). 
-Currently it's private and distributed to colleagues and friends, and
-is available to be used and extended by those with a life-long license,
-as you see fit, with a given email permission from me :) note: if there
-is greater interest, Imgry will likely take on a BSD or MIT license.
+Copyright (c) 2015 Peter Kieltyka (https://twitter.com/peterk)
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

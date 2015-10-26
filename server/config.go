@@ -216,6 +216,8 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 		// store = chainstore.New(memStore, diskStore)
 	}
 
+	chainstore.DefaultTimeout = 60 * time.Second
+
 	if err := store.Open(); err != nil {
 		return nil, err
 	}
