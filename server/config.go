@@ -170,6 +170,8 @@ func (cf *Config) GetDB() (*DB, error) {
 }
 
 func (cf *Config) GetChainstore() (chainstore.Store, error) {
+	chainstore.DefaultTimeout = 60 * time.Second // TODO: ....
+
 	// First, reset cache storage path
 	err := filepath.Walk(
 		cf.Chainstore.Path,
@@ -215,8 +217,6 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 		store = chainstore.New(memStore, chainstore.Async(diskStore))
 		// store = chainstore.New(memStore, diskStore)
 	}
-
-	chainstore.DefaultTimeout = 60 * time.Second // TODO: ....
 
 	if err := store.Open(); err != nil {
 		return nil, err
