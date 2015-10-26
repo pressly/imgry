@@ -55,7 +55,7 @@ func NewExpDecaySample(reservoirSize int, alpha float64) Sample {
 		t0:            time.Now(),
 		values:        newExpDecaySampleHeap(reservoirSize),
 	}
-	s.t1 = s.t0.Add(rescaleThreshold)
+	s.t1 = time.Now().Add(rescaleThreshold)
 	return s
 }
 
@@ -66,7 +66,7 @@ func (s *ExpDecaySample) Clear() {
 	s.count = 0
 	s.t0 = time.Now()
 	s.t1 = s.t0.Add(rescaleThreshold)
-	s.values.Clear()
+	s.values = newExpDecaySampleHeap(s.reservoirSize)
 }
 
 // Count returns the number of samples recorded, which may exceed the
@@ -175,11 +175,11 @@ func (s *ExpDecaySample) update(t time.Time, v int64) {
 	if t.After(s.t1) {
 		values := s.values.Values()
 		t0 := s.t0
-		s.values.Clear()
+		s.values = newExpDecaySampleHeap(s.reservoirSize)
 		s.t0 = t
 		s.t1 = s.t0.Add(rescaleThreshold)
 		for _, v := range values {
-			v.k = v.k * math.Exp(-s.alpha*s.t0.Sub(t0).Seconds())
+			v.k = v.k * math.Exp(-s.alpha*float64(s.t0.Sub(t0)))
 			s.values.Push(v)
 		}
 	}
@@ -504,10 +504,7 @@ func (s *UniformSample) Update(v int64) {
 	if len(s.values) < s.reservoirSize {
 		s.values = append(s.values, v)
 	} else {
-		r := rand.Int63n(s.count)
-		if r < int64(len(s.values)) {
-			s.values[int(r)] = v
-		}
+		s.values[rand.Intn(s.reservoirSize)] = v
 	}
 }
 
@@ -541,10 +538,6 @@ func newExpDecaySampleHeap(reservoirSize int) *expDecaySampleHeap {
 // The internal implementation is copied from the standard library's container/heap
 type expDecaySampleHeap struct {
 	s []expDecaySample
-}
-
-func (h *expDecaySampleHeap) Clear() {
-	h.s = h.s[:0]
 }
 
 func (h *expDecaySampleHeap) Push(s expDecaySample) {

@@ -14,7 +14,7 @@ github.com/pressly/chainstore 907f0f81699a835e86a81f11a3d3cd4d7215c360
 github.com/pressly/chi e135f36c819d75a0d55d95b1c6e2c6faf132dafa
 github.com/pressly/consistentrd 43f3d1020fc03cf1271313ec9b95c8a967c0b878
 github.com/pressly/go-metrics 5102e4a6cd4b8cfea15ea9fb9e62809cd8372f50
-github.com/rcrowley/go-metrics 1ce93efbc8f9c568886b2ef85ce305b2217b3de3
+github.com/rcrowley/go-metrics dee209f2455f101a5e4e593dea94872d2c62d85d
 github.com/stretchr/testify f3960ab1f9664ecc4e27c78af27cc9063d745a43
 github.com/tobi/airbrake-go a3cdd910a3ffef88a20fbecc10363a520ad61a0a
 github.com/unrolled/render aa61028b1d32873eaa3e261a3ef0e892a153107b

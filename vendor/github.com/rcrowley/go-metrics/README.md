@@ -1,9 +1,7 @@
 go-metrics
 ==========
 
-![travis build status](https://travis-ci.org/rcrowley/go-metrics.svg?branch=master)
-
-Go port of Coda Hale's Metrics library: <https://github.com/dropwizard/metrics>.
+Go port of Coda Hale's Metrics library: <https://github.com/codahale/metrics>.
 
 Documentation: <http://godoc.org/github.com/rcrowley/go-metrics>.
 
@@ -49,22 +47,14 @@ w, _ := syslog.Dial("unixgram", "/dev/log", syslog.LOG_INFO, "metrics")
 go metrics.Syslog(metrics.DefaultRegistry, 60e9, w)
 ```
 
-Periodically emit every metric to Graphite using the [Graphite client](https://github.com/cyberdelia/go-metrics-graphite):
+Periodically emit every metric to Graphite:
 
 ```go
-
-import "github.com/cyberdelia/go-metrics-graphite"
-
 addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:2003")
-go graphite.Graphite(metrics.DefaultRegistry, 10e9, "metrics", addr)
+go metrics.Graphite(metrics.DefaultRegistry, 10e9, "metrics", addr)
 ```
 
 Periodically emit every metric into InfluxDB:
-
-**NOTE:** this has been pulled out of the library due to constant fluctuations
-in the InfluxDB API. In fact, all client libraries are on their way out. see
-issues [#121](https://github.com/rcrowley/go-metrics/issues/121) and
-[#124](https://github.com/rcrowley/go-metrics/issues/124) for progress and details.
 
 ```go
 import "github.com/rcrowley/go-metrics/influxdb"
@@ -77,20 +67,17 @@ go influxdb.Influxdb(metrics.DefaultRegistry, 10e9, &influxdb.Config{
 })
 ```
 
-Periodically upload every metric to Librato using the [Librato client](https://github.com/mihasya/go-metrics-librato):
-
-**Note**: the client included with this repository under the `librato` package
-has been deprecated and moved to the repository linked above.
+Periodically upload every metric to Librato:
 
 ```go
-import "github.com/mihasya/go-metrics-librato"
+import "github.com/rcrowley/go-metrics/librato"
 
 go librato.Librato(metrics.DefaultRegistry,
     10e9,                  // interval
     "example@example.com", // account owner email address
     "token",               // Librato API token
     "hostname",            // source
-    []float64{0.95},       // percentiles to send
+    []float64{0.95},       // precentiles to send
     time.Millisecond,      // time unit
 )
 ```
@@ -115,12 +102,3 @@ StatHat support additionally requires their Go client:
 ```sh
 go get github.com/stathat/go
 ```
-
-Publishing Metrics
-------------------
-
-Clients are available for the following destinations:
-
-* Librato - [https://github.com/mihasya/go-metrics-librato](https://github.com/mihasya/go-metrics-librato)
-* Graphite - [https://github.com/cyberdelia/go-metrics-graphite](https://github.com/cyberdelia/go-metrics-graphite)
-* InfluxDB - [https://github.com/vrischmann/go-metrics-influxdb](https://github.com/vrischmann/go-metrics-influxdb)
