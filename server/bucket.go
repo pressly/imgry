@@ -165,7 +165,7 @@ func (b *Bucket) DbFindImage(ctx context.Context, key string, optSizing ...*imgr
 		return nil, ErrImageNotFound
 	}
 
-	data, err := app.Chainstore.Get(ctx, idxKey)
+	data, err := app.Chainstore.Get(context.Background(), idxKey) // TODO
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (b *Bucket) DbSaveImage(ctx context.Context, im *Image, sizing *imgry.Sizin
 
 	idxKey := b.DbIndexKey(im.Key, sizing)
 
-	err = app.Chainstore.Put(ctx, idxKey, im.Data)
+	err = app.Chainstore.Put(context.Background(), idxKey, im.Data) // TODO
 	if err != nil {
 		return
 	}
@@ -205,7 +205,7 @@ func (b *Bucket) DbDelImage(ctx context.Context, key string) (err error) {
 		return
 	}
 
-	err = app.Chainstore.Del(ctx, idxKey) // + "*")
+	err = app.Chainstore.Del(context.Background(), idxKey) // + "*") // TODO
 	return
 }
 
