@@ -10,16 +10,20 @@ import (
 	"github.com/pressly/chi"
 	"github.com/pressly/go-metrics"
 	"github.com/tobi/airbrake-go"
+	"golang.org/x/net/context"
 )
 
-// func CtxInit(ctx context.Context) func(c *web.C, next http.Handler) http.Handler {
-// 	return func(c *web.C, next http.Handler) http.Handler {
-// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 			c.Env["ctx"] = ctx
-// 			next.ServeHTTP(w, r)
-// 		})
-// 	}
-// }
+// Set the parent context in the middleware chain to something else. Useful
+// in the instance of having a global server context to signal all requests.
+func ParentContext(parent context.Context) func(next chi.Handler) chi.Handler {
+	return func(next chi.Handler) chi.Handler {
+		fn := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+			pctx := context.WithValue(parent, chi.URLParamsCtxKey, chi.URLParams(ctx))
+			next.ServeHTTPC(pctx, w, r)
+		}
+		return chi.HandlerFunc(fn)
+	}
+}
 
 // Airbrake recoverer middleware to capture and report any panics to
 // airbrake.io.

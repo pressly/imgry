@@ -62,7 +62,7 @@ func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request
 	chi.URLParams(ctx)["key"] = imKey
 
 	// First check if we have the original.. a bit of extra overhead, but its okay
-	_, err = bucket.DbFindImage(imKey, nil) // TODO: pass, ctx for timeout..
+	_, err = bucket.DbFindImage(ctx, imKey, nil)
 	if err != nil && err != ErrImageNotFound {
 		respond.ImageError(w, 422, err)
 		return
@@ -72,7 +72,7 @@ func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request
 	if err == ErrImageNotFound {
 		// TODO: add image sizing throttler here....
 
-		_, err := bucket.AddImagesFromUrls([]string{fetchUrl}) // TODO: pass ctx
+		_, err := bucket.AddImagesFromUrls(ctx, []string{fetchUrl})
 		if err != nil {
 			lg.Errorf("Fetching failed for %s because %s", fetchUrl, err)
 			respond.ImageError(w, 422, err)
@@ -100,7 +100,7 @@ func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	im, err := bucket.GetImageSize(chi.URLParams(ctx)["key"], sizing)
+	im, err := bucket.GetImageSize(ctx, chi.URLParams(ctx)["key"], sizing)
 	if err != nil {
 		lg.Errorf("Failed to get image for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
@@ -132,7 +132,7 @@ func GetImageInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := app.HttpFetcher.Get(url)
+	response, err := app.HttpFetcher.Get(ctx, url)
 	if err != nil {
 		respond.ApiError(w, 422, err)
 		return
@@ -247,7 +247,7 @@ func BucketAddItems(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	images, err := bucket.AddImagesFromUrls(urls)
+	images, err := bucket.AddImagesFromUrls(ctx, urls)
 	if err != nil {
 		// TODO: refactor.. ApiError will cache invalid image errors,
 		// but for an array of urls, we shouldn't cache the entire response
@@ -282,7 +282,7 @@ func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = bucket.DbDelImage(imageKey)
+	err = bucket.DbDelImage(ctx, imageKey)
 	if err != nil {
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return

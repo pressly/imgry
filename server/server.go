@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/goware/heartbeat"
+	"github.com/goware/httpcoala"
 	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chi"
@@ -91,19 +92,16 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r := chi.NewRouter()
 
-	// TODO
-	// hmm.. with chi,
-	// we can have a ctxInit() middleware that sets the ctx to be based on
-	// the parent..
-
-	// TODO
-	// check case insensitivyt with chi first before shipping
-
-	// r.Use(CtxInit(srv.Ctx)) // .. TODO .. setting the ctx parent..
+	r.Use(ParentContext(srv.Ctx))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	r.Use(middleware.CloseNotify)
+	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
+	r.Use(httpcoala.Route("HEAD", "GET"))
+
 	r.Use(heartbeat.Route("/ping"))
 	r.Use(heartbeat.Route("/favicon.ico"))
 

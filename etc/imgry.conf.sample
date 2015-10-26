@@ -13,7 +13,7 @@ nodes            = [ "http://127.0.0.1:4446" ]
 [limits]
 max_requests     = 1000      # request throughput (/sec)
 backlog_size     = 5000      # backlog capacity
-request_timeout  = "45s"     # global request timeout
+request_timeout  = "40s"     # global request timeout
 backlog_timeout  = "1500ms"  # backlog wait period
 max_fetchers     = 100       # num of parallel http fetchers
 max_image_sizers = 20        # num of parallel image sizers

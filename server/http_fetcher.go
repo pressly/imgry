@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
 	"github.com/rcrowley/go-metrics"
@@ -86,8 +88,8 @@ func (hf HttpFetcher) client() *http.Client {
 	return hf.Client
 }
 
-func (hf HttpFetcher) Get(url string) (*HttpFetcherResponse, error) {
-	resps, err := hf.GetAll([]string{url})
+func (hf HttpFetcher) Get(ctx context.Context, url string) (*HttpFetcherResponse, error) {
+	resps, err := hf.GetAll(ctx, []string{url})
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +103,7 @@ func (hf HttpFetcher) Get(url string) (*HttpFetcherResponse, error) {
 	return resp, nil
 }
 
-func (hf HttpFetcher) GetAll(urls []string) ([]*HttpFetcherResponse, error) {
+func (hf HttpFetcher) GetAll(ctx context.Context, urls []string) ([]*HttpFetcherResponse, error) {
 	m := metrics.GetOrRegisterTimer("fn.FetchRemoteData", nil) // TODO: update metric name
 	defer m.UpdateSince(time.Now())
 

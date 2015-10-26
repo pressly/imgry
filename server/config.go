@@ -208,9 +208,12 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 			s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
 		)
 
-		store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
+		// store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
+		store = chainstore.New(memStore, diskStore, s3Store)
+
 	} else {
-		store = chainstore.New(memStore, chainstore.Async(diskStore))
+		// store = chainstore.New(memStore, chainstore.Async(diskStore))
+		store = chainstore.New(memStore, diskStore)
 	}
 
 	if err := store.Open(); err != nil {
