@@ -1,7 +1,8 @@
-package boltstore
+package logmgr
 
 import (
-	"io/ioutil"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/pressly/chainstore"
@@ -9,45 +10,36 @@ import (
 	"golang.org/x/net/context"
 )
 
-func tempDir() string {
-	path, _ := ioutil.TempDir("", "chainstore-")
-	return path
-}
-
-func TestBoltStore(t *testing.T) {
+func TestLogMgrStore(t *testing.T) {
 	var store chainstore.Store
 	var err error
 
 	ctx := context.Background()
 
-	store = chainstore.New(New(tempDir()+"/test.db", "test"))
-
 	assert := assert.New(t)
 
+	logger := log.New(os.Stdout, "", 0)
+
+	store = chainstore.New(New(logger, "test"))
 	err = store.Open()
 	assert.Nil(err)
-
-	defer store.Close() // does this get called?
+	defer store.Close()
 
 	// Put a bunch of objects
 	e1 := store.Put(ctx, "hi", []byte{1, 2, 3})
 	e2 := store.Put(ctx, "bye", []byte{4, 5, 6})
-	assert.Equal(e1, nil)
-	assert.Equal(e2, nil)
+	assert.Nil(e1)
+	assert.Nil(e2)
 
 	// Get those objects
-	v1, _ := store.Get(ctx, "hi")
-	v2, _ := store.Get(ctx, "bye")
-	assert.Equal(v1, []byte{1, 2, 3})
-	assert.Equal(v2, []byte{4, 5, 6})
+	_, e1 = store.Get(ctx, "hi")
+	_, e2 = store.Get(ctx, "bye")
+	assert.Equal(e1, nil)
+	assert.Equal(e2, nil)
 
 	// Delete those objects
 	e1 = store.Del(ctx, "hi")
 	e2 = store.Del(ctx, "bye")
 	assert.Equal(e1, nil)
 	assert.Equal(e2, nil)
-
-	v, _ := store.Get(ctx, "hi")
-	assert.Equal(len(v), 0)
-
 }

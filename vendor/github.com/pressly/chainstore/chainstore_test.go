@@ -1,6 +1,7 @@
 package chainstore_test
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -13,58 +14,66 @@ import (
 	"github.com/pressly/chainstore/lrumgr"
 	"github.com/pressly/chainstore/memstore"
 	"github.com/pressly/chainstore/metricsmgr"
-	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 )
+
+func tempDir() string {
+	path, _ := ioutil.TempDir("", "chainstore-")
+	return path
+}
 
 func TestBasicChain(t *testing.T) {
 	var ms, fs, chain chainstore.Store
 	var err error
 
+	ctx := context.Background()
+
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	Convey("Basic chain", t, func() {
-		storeDir := chainstore.TempDir()
-		err = nil
+	storeDir := tempDir()
+	err = nil
 
-		ms = memstore.New(100)
-		fs = filestore.New(storeDir+"/filestore", 0755)
+	ms = memstore.New(100)
+	fs = filestore.New(storeDir+"/filestore", 0755)
 
-		chain = chainstore.New(
-			logmgr.New(logger, ""),
-			ms,
-			fs,
-		)
-		err = chain.Open()
-		So(err, ShouldEqual, nil)
+	chain = chainstore.New(
+		logmgr.New(logger, ""),
+		ms,
+		fs,
+	)
 
-		Convey("Put/Get/Del", func() {
-			v := []byte("value")
-			err = chain.Put("k", v)
-			So(err, ShouldEqual, nil)
+	assert := assert.New(t)
 
-			val, err := chain.Get("k")
-			So(err, ShouldEqual, nil)
-			So(v, ShouldResemble, v)
+	err = chain.Open()
+	assert.Nil(err)
 
-			val, err = ms.Get("k")
-			So(err, ShouldEqual, nil)
-			So(val, ShouldResemble, v)
+	v := []byte("value")
+	err = chain.Put(ctx, "k", v)
+	assert.Nil(err)
 
-			val, err = fs.Get("k")
-			So(err, ShouldEqual, nil)
-			So(val, ShouldResemble, v)
+	val, err := chain.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(val, v)
 
-			err = chain.Del("k")
-			So(err, ShouldEqual, nil)
+	val, err = ms.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(val, v)
 
-			val, err = fs.Get("k")
-			So(err, ShouldEqual, nil)
-			So(len(val), ShouldEqual, 0)
+	val, err = fs.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(val, v)
 
-			val, err = chain.Get("woo!@#")
-			So(err, ShouldNotBeNil)
-		})
-	})
+	err = chain.Del(ctx, "k")
+	assert.Nil(err)
+
+	val, err = fs.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(len(val), 0)
+
+	val, err = chain.Get(ctx, "woo!@#")
+	assert.NotNil(err)
 }
 
 func TestAsyncChain(t *testing.T) {
@@ -73,71 +82,52 @@ func TestAsyncChain(t *testing.T) {
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	Convey("Async chain", t, func() {
-		storeDir := chainstore.TempDir()
-		err = nil
+	storeDir := tempDir()
+	err = nil
 
-		ms = memstore.New(100)
-		fs = filestore.New(storeDir+"/filestore", 0755)
-		bs = boltstore.New(storeDir+"/boltstore/bolt.db", "test")
+	ms = memstore.New(100)
+	fs = filestore.New(storeDir+"/filestore", 0755)
+	bs = boltstore.New(storeDir+"/boltstore/bolt.db", "test")
 
-		chain = chainstore.New(
-			logmgr.New(logger, ""),
-			ms,
-			chainstore.Async(
-				logmgr.New(logger, "async"),
-				metricsmgr.New("chaintest", nil,
-					fs,
-					lrumgr.New(100, bs),
-				),
+	chain = chainstore.New(
+		logmgr.New(logger, ""),
+		ms,
+		chainstore.Async(
+			logmgr.New(logger, "async"),
+			metricsmgr.New("chaintest", nil,
+				fs,
+				lrumgr.New(100, bs),
 			),
-		)
-		err = chain.Open()
-		So(err, ShouldEqual, nil)
+		),
+	)
 
-		Convey("Put/Get/Del", func() {
-			v := []byte("value")
-			err = chain.Put("k", v)
-			So(err, ShouldEqual, nil)
+	ctx := context.Background()
 
-			val, err := chain.Get("k")
-			So(err, ShouldEqual, nil)
-			So(v, ShouldResemble, v)
+	assert := assert.New(t)
 
-			val, err = ms.Get("k")
-			So(err, ShouldEqual, nil)
-			So(val, ShouldResemble, v)
+	err = chain.Open()
+	assert.Nil(err)
 
-			time.Sleep(10e6) // wait for async operation..
+	v := []byte("value")
+	err = chain.Put(ctx, "k", v)
+	assert.Nil(err)
 
-			val, err = fs.Get("k")
-			So(err, ShouldEqual, nil)
-			So(val, ShouldResemble, v)
+	val, err := chain.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(val, v)
 
-			val, err = bs.Get("k")
-			So(err, ShouldEqual, nil)
-			So(val, ShouldResemble, v)
-		})
-	})
+	val, err = ms.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(val, v)
+
+	time.Sleep(time.Second * 1) // wait for async operation..
+
+	val, err = fs.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(val, v)
+
+	val, err = bs.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal(val, v)
 
 }
-
-/*
-c := chainstore.New(
-	logmgr.New(l, ""),
-	memstore.New(1000),
-	chainstore.Async(
-		logmgr.New(l, "async"),
-		metricsmgr.New(
-			"bolt", &metricsmgr.Config{a, b, c},
-			batchmgr.New(10),
-			lrumgr.New(5000, boltstore.New("/tmp/bolt.db", 0755)),
-		),
-		metricsmgr.New(
-			"s3", &metricsmgr.Config{a, b, c}
-			s3store.New("bucket", "u", "p")
-		)
-	)
-)
-
-*/

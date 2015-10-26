@@ -3,12 +3,10 @@ package levelstore
 import (
 	"os"
 
+	"github.com/pressly/chainstore"
 	"github.com/syndtr/goleveldb/leveldb"
+	"golang.org/x/net/context"
 )
-
-// TODO: take options ..
-// imgry: nocompression
-// .. others...?
 
 type levelStore struct {
 	storePath string
@@ -16,7 +14,8 @@ type levelStore struct {
 	opened    bool
 }
 
-func New(storePath string) *levelStore {
+// New returns returns a leveldb backed store.
+func New(storePath string) chainstore.Store {
 	return &levelStore{storePath: storePath}
 }
 
@@ -48,18 +47,33 @@ func (s *levelStore) Close() (err error) {
 	return
 }
 
-func (s *levelStore) Put(key string, val []byte) error {
-	return s.db.Put([]byte(key), val, nil)
-}
-
-func (s *levelStore) Get(key string) (val []byte, err error) {
-	val, err = s.db.Get([]byte(key), nil)
-	if err != nil && err != leveldb.ErrNotFound {
-		return nil, err
+func (s *levelStore) Put(ctx context.Context, key string, val []byte) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return s.db.Put([]byte(key), val, nil)
 	}
-	return val, nil
 }
 
-func (s *levelStore) Del(key string) error {
-	return s.db.Delete([]byte(key), nil)
+func (s *levelStore) Get(ctx context.Context, key string) (val []byte, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		val, err = s.db.Get([]byte(key), nil)
+		if err != nil && err != leveldb.ErrNotFound {
+			return nil, err
+		}
+		return val, nil
+	}
+}
+
+func (s *levelStore) Del(ctx context.Context, key string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return s.db.Delete([]byte(key), nil)
+	}
 }

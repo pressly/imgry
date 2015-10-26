@@ -1,147 +1,254 @@
 package chainstore
 
 import (
-	"errors"
-	"io/ioutil"
+	"fmt"
 	"regexp"
+	"sync"
+	"time"
+
+	"golang.org/x/net/context"
+)
+
+type storeFn func(s Store) error
+
+var (
+	keyInvalidator = regexp.MustCompile(`(i?)[^a-z0-9\/_\-:\.]`)
 )
 
 var (
-	ErrInvalidKey = errors.New("Invalid key")
-
-	KeyInvalidator = regexp.MustCompile(`(i?)[^a-z0-9\/_\-:\.]`)
+	// DefaultTimeout must be used by stores as timeout.
+	DefaultTimeout = time.Millisecond * 3500
 )
 
 const (
-	MaxKeyLen = 256
+	maxKeyLen = 256
 )
 
+// Store represents a store than can be used as a chainstore link.
 type Store interface {
 	Open() error
 	Close() error
-	Put(key string, val []byte) error
-	Get(key string) ([]byte, error)
-	Del(key string) error
+	Put(ctx context.Context, key string, val []byte) error
+	Get(ctx context.Context, key string) ([]byte, error)
+	Del(ctx context.Context, key string) error
 }
 
-// TODO: how can we check if a store has been opened...?
+type storeWrapper struct {
+	Store
+	errE  error
+	errMu sync.RWMutex
+}
 
+func (s *storeWrapper) err() error {
+	s.errMu.RLock()
+	defer s.errMu.RUnlock()
+	return s.errE
+}
+
+func (s *storeWrapper) setErr(err error) {
+	s.errMu.Lock()
+	defer s.errMu.Unlock()
+	s.errE = err
+}
+
+// Chain represents a store chain.
 type Chain struct {
-	stores []Store
+	stores []*storeWrapper
 	async  bool
 }
 
+func newChain(stores ...Store) *Chain {
+	c := &Chain{
+		stores: make([]*storeWrapper, 0, len(stores)),
+	}
+	for _, s := range stores {
+		c.stores = append(c.stores, &storeWrapper{Store: s})
+	}
+	return c
+}
+
+// New creates a new store chain backed by the passed stores.
 func New(stores ...Store) Store {
-	return &Chain{stores, false}
-	// TODO: make the chain..
-	// call Open(), but in case of error..?
+	return newChain(stores...)
 }
 
+// Async creates and async store.
 func Async(stores ...Store) Store {
-	return &Chain{stores, true}
+	c := newChain(stores...)
+	c.async = true
+	return c
 }
 
-func (c *Chain) Open() (err error) {
-	for _, s := range c.stores {
-		err = s.Open()
-		if err != nil {
-			return // return first error that comes up
-		}
+// Open opens all the stores.
+func (c *Chain) Open() error {
+
+	if err := c.firstErr(); err != nil {
+		return fmt.Errorf("Open failed due to a previous error: %q", err)
 	}
-	return
-}
 
-func (c *Chain) Close() (err error) {
-	for _, s := range c.stores {
-		err = s.Close()
-		// TODO: we shouldn't stop on first error.. should keep trying to close
-		// and record errors separately
-		if err != nil {
-			return
-		}
+	var wg sync.WaitGroup
+
+	for i := range c.stores {
+		wg.Add(1)
+		go func(s *storeWrapper) {
+			defer wg.Done()
+			s.setErr(s.Open())
+		}(c.stores[i])
 	}
-	return
+
+	wg.Wait()
+
+	return c.firstErr()
 }
 
-func (c *Chain) Put(key string, val []byte) (err error) {
-	if !IsValidKey(key) {
+// Close closes all the stores.
+func (c *Chain) Close() error {
+	var wg sync.WaitGroup
+
+	for i := range c.stores {
+		wg.Add(1)
+		go func(s *storeWrapper) {
+			defer wg.Done()
+			s.setErr(s.Close())
+		}(c.stores[i])
+	}
+
+	wg.Wait()
+
+	return c.firstErr()
+}
+
+// Put propagates a key-value pair to all stores.
+func (c *Chain) Put(ctx context.Context, key string, val []byte) (err error) {
+	if !isValidKey(key) {
 		return ErrInvalidKey
 	}
 
-	fn := func() (err error) {
-		for _, s := range c.stores {
-			err = s.Put(key, val)
-			if err != nil {
-				return
-			}
-		}
-		return
+	if err := c.firstErr(); err != nil {
+		return fmt.Errorf("Open failed due to a previous error: %q", err)
 	}
-	if c.async {
-		go fn()
-	} else {
-		err = fn()
+
+	fn := func(s Store) error {
+		return s.Put(ctx, key, val)
 	}
-	return
+
+	return c.doWithContext(ctx, fn)
 }
 
-func (c *Chain) Get(key string) (val []byte, err error) {
-	if !IsValidKey(key) {
+// Get returns the value identified by the given key. This is a sequential
+// scan. When a value is found it gets propagated to all the stores that do not
+// have it.
+func (c *Chain) Get(ctx context.Context, key string) (val []byte, err error) {
+	if !isValidKey(key) {
 		return nil, ErrInvalidKey
 	}
 
-	for i, s := range c.stores {
-		val, err = s.Get(key)
-		if err != nil {
-			return
-		}
+	if err := c.firstErr(); err != nil {
+		return nil, fmt.Errorf("Open failed due to a previous error: %q", err)
+	}
 
-		if len(val) > 0 {
-			if i > 0 {
-				// put the value in all other stores up the chain
-				fn := func() {
-					for n := i - 1; n >= 0; n-- {
-						c.stores[n].Put(key, val) // errors..?
-					}
-				}
-				// if c.async { } else { } ....?
-				go fn()
+	nextStore := make(chan Store, len(c.stores))
+	for _, store := range c.stores {
+		nextStore <- store
+	}
+	close(nextStore)
+
+	putBack := make(chan Store, len(c.stores))
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case store, ok := <-nextStore:
+
+			if !ok {
+				return nil, ErrNoSuchKey
 			}
 
-			// return the first value found on the chain
-			return
+			val, err := store.Get(ctx, key)
+
+			if err != nil || len(val) == 0 {
+				if err == ErrTimeout {
+					return nil, err
+				}
+				putBack <- store
+				continue
+			}
+
+			close(putBack)
+
+			for store := range putBack {
+				go store.Put(ctx, key, val)
+			}
+
+			return val, nil
 		}
 	}
-	return
+
+	panic("reached")
 }
 
-func (c *Chain) Del(key string) (err error) {
-	if !IsValidKey(key) {
+// Del removes a key from all stores.
+func (c *Chain) Del(ctx context.Context, key string) (err error) {
+	if !isValidKey(key) {
 		return ErrInvalidKey
 	}
 
-	fn := func() (err error) {
-		for _, s := range c.stores {
-			err = s.Del(key)
-			if err != nil {
-				return
-			}
+	if err := c.firstErr(); err != nil {
+		return fmt.Errorf("Delete failed due to a previous error: %q", err)
+	}
+
+	fn := func(s Store) error {
+		return s.Del(ctx, key)
+	}
+
+	return c.doWithContext(ctx, fn)
+}
+
+func (c *Chain) doWithContext(ctx context.Context, fn storeFn) (err error) {
+	doAndWait := func() (err error) {
+		var wg sync.WaitGroup
+
+		for i := range c.stores {
+			wg.Add(1)
+
+			go func(s *storeWrapper) {
+				defer wg.Done()
+				s.setErr(fn(s))
+			}(c.stores[i])
 		}
-		return
+
+		wg.Wait()
+
+		return c.firstErr()
 	}
+
 	if c.async {
-		go fn()
+		go doAndWait()
 	} else {
-		err = fn()
+		err = doAndWait()
 	}
-	return
+
+	return err
 }
 
-func IsValidKey(key string) bool {
-	return len(key) <= MaxKeyLen && !KeyInvalidator.MatchString(key)
+func (c *Chain) firstErr() error {
+	var rerr error
+	for i := range c.stores {
+		if err := c.stores[i].err(); err != nil {
+			rerr = err
+			if err == ErrTimeout {
+				// We can recover from this kind of error, so we return it and try
+				// again.
+				c.stores[i].setErr(nil)
+				return err
+			}
+			break
+		}
+	}
+	return rerr
 }
 
-func TempDir() string {
-	path, _ := ioutil.TempDir("", "chainstore-")
-	return path
+func isValidKey(key string) bool {
+	return len(key) <= maxKeyLen && !keyInvalidator.MatchString(key)
 }
