@@ -24,7 +24,7 @@ type Server struct {
 	Config      *Config
 	DB          *DB
 	Chainstore  chainstore.Store
-	HttpFetcher *HttpFetcher
+	Fetcher     *Fetcher
 	ImageEngine imgry.Engine
 
 	Ctx        context.Context
@@ -56,7 +56,7 @@ func (srv *Server) Configure() (err error) {
 		return err
 	}
 
-	srv.HttpFetcher = NewHttpFetcher()
+	srv.Fetcher = NewFetcher()
 
 	tmpDir := srv.Config.TmpDir
 	srv.ImageEngine = imagick.Engine{}

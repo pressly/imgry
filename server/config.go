@@ -195,8 +195,6 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 	// the bolt data..
 
 	// Build the stores and setup the chain
-	// memStore := memstore.New(cf.Chainstore.MemCacheSize * 1024 * 1024)
-
 	memStore := metricsmgr.New("fn.store.mem", nil,
 		memstore.New(cf.Chainstore.MemCacheSize*1024*1024),
 	)

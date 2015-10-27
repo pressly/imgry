@@ -10,30 +10,26 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
 	"github.com/rcrowley/go-metrics"
+	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 var (
-	DefaultHttpFetcherReqTimeout     = time.Second * 20
-	DefaultHttpFetcherReqNumAttempts = 2
+	DefaultFetcherThroughput     = 100
+	DefaultFetcherReqNumAttempts = 2
+	// DefaultFetcherReqTimeout = 60 * time.Second
 )
 
-// TODO: switch to ctxhttp .. why not..
-
-// TODO: rename to just Fetcher
-
 // TODO: get Throughput from app.Config.Limits.MaxFetchers
-// ........
 
-type HttpFetcher struct {
+type Fetcher struct {
 	Client    *http.Client
 	Transport *http.Transport
 
-	ReqTimeout     time.Duration
+	Throughput     int // TODO
 	ReqNumAttempts int
 	HostKeepAlive  time.Duration
 
@@ -46,22 +42,21 @@ type HttpFetcher struct {
 // for a large number of hosts. Instead we will have to call hf.Transport.CloseIdleConnections()
 // every HostKeepAlive duration (assuming > 1 second)
 
-type HttpFetcherResponse struct {
+type FetcherResponse struct {
 	URL    *url.URL
 	Status int
 	Data   []byte
 	Err    error
 }
 
-func NewHttpFetcher() *HttpFetcher {
-	hf := &HttpFetcher{}
-	hf.ReqTimeout = DefaultHttpFetcherReqTimeout
-	hf.ReqNumAttempts = DefaultHttpFetcherReqNumAttempts
+func NewFetcher() *Fetcher {
+	hf := &Fetcher{}
+	hf.ReqNumAttempts = DefaultFetcherReqNumAttempts
 	hf.HostKeepAlive = 60 * time.Second
 	return hf
 }
 
-func (hf HttpFetcher) client() *http.Client {
+func (hf Fetcher) client() *http.Client {
 	if hf.Client != nil {
 		return hf.Client
 	}
@@ -69,32 +64,32 @@ func (hf HttpFetcher) client() *http.Client {
 	hf.Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		Dial: (&net.Dialer{
-			Timeout:   hf.ReqTimeout,
+			// Timeout:   DefaultFetcherReqTimeout,
 			KeepAlive: hf.HostKeepAlive,
 		}).Dial,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-		TLSHandshakeTimeout:   5 * time.Second,
-		MaxIdleConnsPerHost:   2,
-		DisableCompression:    true,
-		DisableKeepAlives:     true,
-		ResponseHeaderTimeout: hf.ReqTimeout,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		TLSHandshakeTimeout: 5 * time.Second,
+		MaxIdleConnsPerHost: 2,
+		DisableCompression:  true,
+		DisableKeepAlives:   true,
+		// ResponseHeaderTimeout: DefaultFetcherReqTimeout,
 	}
 
 	hf.Client = &http.Client{
-		Timeout:   hf.ReqTimeout,
+		// Timeout:   hf.ReqTimeout,
 		Transport: hf.Transport,
 	}
 
 	return hf.Client
 }
 
-func (hf HttpFetcher) Get(ctx context.Context, url string) (*HttpFetcherResponse, error) {
-	resps, err := hf.GetAll(ctx, []string{url})
+func (f Fetcher) Get(ctx context.Context, url string) (*FetcherResponse, error) {
+	resps, err := f.GetAll(ctx, []string{url})
 	if err != nil {
 		return nil, err
 	}
 	if len(resps) == 0 {
-		return nil, errors.New("httpfetcher: no response")
+		return nil, errors.New("fetcher: no response")
 	}
 	resp := resps[0]
 	if resp.Err != nil {
@@ -103,11 +98,11 @@ func (hf HttpFetcher) Get(ctx context.Context, url string) (*HttpFetcherResponse
 	return resp, nil
 }
 
-func (hf HttpFetcher) GetAll(ctx context.Context, urls []string) ([]*HttpFetcherResponse, error) {
-	m := metrics.GetOrRegisterTimer("fn.FetchRemoteData", nil) // TODO: update metric name
+func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse, error) {
+	m := metrics.GetOrRegisterTimer("fn.FetchRemoteData", nil)
 	defer m.UpdateSince(time.Now())
 
-	resps := make([]*HttpFetcherResponse, len(urls))
+	fetches := make([]*FetcherResponse, len(urls))
 
 	var wg sync.WaitGroup
 	wg.Add(len(urls))
@@ -115,41 +110,41 @@ func (hf HttpFetcher) GetAll(ctx context.Context, urls []string) ([]*HttpFetcher
 	// TODO: add thruput here..
 
 	for i, urlStr := range urls {
-		resps[i] = &HttpFetcherResponse{}
+		fetches[i] = &FetcherResponse{}
 
-		go func(resp *HttpFetcherResponse) {
+		go func(fetch *FetcherResponse) {
 			defer wg.Done()
 
 			url, err := urlx.Parse(urlStr)
 			if err != nil {
-				resp.Err = err
+				fetch.Err = err
 				return
 			}
-			resp.URL = url
+			fetch.URL = url
 
 			lg.Infof("Fetching %s", url.String())
 
-			fetch, err := hf.client().Get(url.String())
+			resp, err := ctxhttp.Get(ctx, f.client(), url.String())
 			if err != nil {
 				lg.Warnf("Error fetching %s because %s", url.String(), err)
-				resp.Err = err
+				fetch.Err = err
 				return
 			}
-			defer fetch.Body.Close()
+			defer resp.Body.Close()
 
-			resp.Status = fetch.StatusCode
+			fetch.Status = resp.StatusCode
 
-			body, err := ioutil.ReadAll(fetch.Body)
+			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				resp.Err = err
+				fetch.Err = err
 				return
 			}
-			resp.Data = body
-			resp.Err = nil
+			fetch.Data = body
+			fetch.Err = nil
 
-		}(resps[i])
+		}(fetches[i])
 	}
 
 	wg.Wait()
-	return resps, nil
+	return fetches, nil
 }

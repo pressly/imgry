@@ -132,7 +132,7 @@ func GetImageInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := app.HttpFetcher.Get(ctx, url)
+	response, err := app.Fetcher.Get(ctx, url)
 	if err != nil {
 		respond.ApiError(w, 422, err)
 		return

@@ -46,7 +46,7 @@ func (b *Bucket) ValidID() (bool, error) {
 }
 
 func (b *Bucket) AddImagesFromUrls(ctx context.Context, urls []string) ([]*Image, error) {
-	responses, err := app.HttpFetcher.GetAll(ctx, urls)
+	responses, err := app.Fetcher.GetAll(ctx, urls)
 	if err != nil {
 		return nil, err
 	}
