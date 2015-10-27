@@ -7,9 +7,8 @@ import (
 	"net/http/pprof"
 	"time"
 
-	"github.com/goware/lg"
 	"github.com/pressly/chi"
-	"github.com/pressly/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"github.com/tobi/airbrake-go"
 	"golang.org/x/net/context"
 )
@@ -88,8 +87,6 @@ func (l *wrappedResponseWriter) Status() int {
 func trackRoute(metricID string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		route := fmt.Sprintf("route.%s", metricID)
-
-		lg.Info("track metric", route)
 
 		routeTimer := metrics.GetOrRegisterTimer(route, nil)
 		errCounter := metrics.GetOrRegisterCounter(fmt.Sprintf("%s-err", route), nil)
