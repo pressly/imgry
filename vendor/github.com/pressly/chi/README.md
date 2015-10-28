@@ -23,6 +23,67 @@ scaled very well.
 * Request context control (value chaining, deadlines and timeouts) - built on `net/context`
 * Robust (tested, used in production)
 
+## Router design
+
+Chi's router is based on a kind of [Radix patricia trie](https://en.wikipedia.org/wiki/Radix_tree), just
+like most other mux's. Built on top of the tree is the `Router` interface:
+
+```go
+// Register a middleware handler (or few) on the middleware stack
+Use(middlewares ...interface{})
+
+// Register a new middleware stack
+Group(fn func(r Router)) Router
+
+// Mount an inline sub-router
+Route(pattern string, fn func(r Router)) Router
+
+// Mount a sub-router
+Mount(path string, handlers ...interface{})
+
+// Register routing handler for all http methods
+Handle(pattern string, handlers ...interface{})
+
+// Register routing handler for CONNECT http method
+Connect(pattern string, handlers ...interface{})
+
+// Register routing handler for HEAD http method
+Head(pattern string, handlers ...interface{})
+
+// Register routing handler for GET http method
+Get(pattern string, handlers ...interface{})
+
+// Register routing handler for POST http method
+Post(pattern string, handlers ...interface{})
+
+// Register routing handler for PUT http method
+Put(pattern string, handlers ...interface{})
+
+// Register routing handler for PATCH http method
+Patch(pattern string, handlers ...interface{})
+
+// Register routing handler for DELETE http method
+Delete(pattern string, handlers ...interface{})
+
+// Register routing handler for TRACE http method
+Trace(pattern string, handlers ...interface{})
+
+// Register routing handler for OPTIONS http method
+Options(pattern string, handlers ...interface{})
+```
+
+Each method route accepts a URL `pattern` and chain of `handlers`. The URL pattern
+supports named params (ie. `/users/:userID`) and wildcards (ie. `/admin/*`). The
+handler
+
+The router is extensible if you want to build your own mux and implement the
+`Router` interface. For example, like a debug router that prints all of the routes,
+or an ACL (access control) router that enforces some default middleware rules.
+
+
+======> Middleware signature .............. <============<<<
+
+
 ## Example
 
 --todo--
@@ -31,15 +92,10 @@ see: _examples/simple
 
 .. show request timeout with context.Context
 
-## net/context?
-
-...
 
 
-## Router design
 
-.. radix, url params.. param, wildcard, regexp todo
-
+## Future
 
 Designed for the future. We're hopefully that by Go 1.7 (in 2016), `net/context` will be in the Go stdlib
 and net/http will support context.Context natively, at which point we'll be updating the signatures to
@@ -53,6 +109,13 @@ natively in net/http.
 
 
 ## Middlewares
+
+...
+
+TODO: write about the middlewares packaged with chi, and the special Timeout and CloseNotify ones
+
+
+## net/context?
 
 ...
 
@@ -75,7 +138,6 @@ natively in net/http.
   * ...
 * Register not found handler
 * Register error handler (500's)
-* Request timeout middleware
 * Make note about separate responder
 * HTTP2 example
   * both http 1.1 and http2 automatically.. just turn it on :)

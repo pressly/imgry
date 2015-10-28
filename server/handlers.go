@@ -7,13 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"golang.org/x/net/context"
-
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
 	"github.com/pressly/chi"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
+	"golang.org/x/net/context"
 )
 
 var (

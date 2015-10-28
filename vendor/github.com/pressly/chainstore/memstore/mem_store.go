@@ -7,7 +7,7 @@ import (
 )
 
 type memStore struct {
-	sync.RWMutex
+	sync.Mutex
 	data map[string][]byte
 }
 
@@ -28,9 +28,9 @@ func (s *memStore) Put(key string, val []byte) (err error) {
 }
 
 func (s *memStore) Get(key string) ([]byte, error) {
-	s.RLock()
+	s.Lock()
 	val := s.data[key]
-	s.RUnlock()
+	s.Unlock()
 	return val, nil
 }
 
