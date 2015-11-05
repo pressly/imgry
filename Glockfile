@@ -20,5 +20,5 @@ github.com/tobi/airbrake-go a3cdd910a3ffef88a20fbecc10363a520ad61a0a
 github.com/unrolled/render aa61028b1d32873eaa3e261a3ef0e892a153107b
 github.com/vaughan0/go-ini a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
 github.com/zenazn/goji 46b46e00f46dda650e04f0bceeb7c40732cd5988
-golang.org/x/net 1b27761f1cd4840a914b5255e4357385091562e5
+golang.org/x/net b4e17d61b15679caf2335da776c614169a1b4643
 stathat.com/c/consistent 748f01b59d1b2218efe39513039e9ee31266d7c7
