@@ -1,7 +1,7 @@
-chi
+chi [![GoDoc](https://godoc.org/github.com/pressly/chi?status.svg)](https://godoc.org/github.com/pressly/chi)
 ===
 
-`chi` is an expressive, small and fast HTTP mux/router for Go web services built on net/context.
+`chi` is a small, fast and expressive router / mux for Go HTTP services built with net/context.
 
 Chi encourages writing services by composing small handlers and middlewares with many or few routes.
 Each middleware is like a layer of an onion connected through a consistent interface (http.Handler or
@@ -17,15 +17,15 @@ scaled very well.
 
 ## Features
 
-* Lightweight - cloc`d in 573 LOC for the chi router
+* Lightweight - cloc`d in ~600 LOC for the chi router
 * Fast - yes, benchmarks coming
-* Expressive routing - middleware stacks, inline middleware, groups, mount routers
+* Expressive routing - middlewares, inline middleware groups/chains, and subrouter mounting
 * Request context control (value chaining, deadlines and timeouts) - built on `net/context`
 * Robust (tested, used in production)
 
 ## Router design
 
-Chi's router is based on a kind of [Radix patricia trie](https://en.wikipedia.org/wiki/Radix_tree).
+Chi's router is based on a kind of [Patricia Radix trie](https://en.wikipedia.org/wiki/Radix_tree).
 Built on top of the tree is the `Router` interface:
 
 ```go
@@ -79,33 +79,9 @@ The `handlers` argument can be a single request handler, or a chain of middlewar
 handlers, followed by a request handler. The request handler is required, and must
 be the last argument.
 
-```go
-// Mini-example
-// ...
-r := chi.NewRouter()
-r.Post("/login", EnforceSSL, LoginHandler) // inline middleware on the routing definition
-// ...
-
-// A dummy middleware to ensure the request URI scheme is HTTPS
-func EnforceSSL(next http.Handler) http.Handler {
-  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    if r.URL.Scheme != "HTTPS" {
-      w.WriteHeader(405)
-      return
-    }
-    next.ServeHTTP(w, r)
-  })
-}
-
-func LoginHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-  // read POST body from the request and authenticate, and respond accordingly
-  // ...
-}
-```
-
-We lose type checking during compilation of the `handlers`, but that'll be resolved
-sometime in the [future](#future), we hope, when Go's stdlib supports net/context
-in net/http. Instead, chi checks the types at runtime and panics in case of a mismatch.
+We lose type checking of the handlers, but that'll be resolved sometime in the [future](#future),
+we hope, when Go's stdlib supports net/context in net/http. For now, chi checks the types
+at runtime and panics in case of a mismatch.
 
 The supported handlers are as follows..
 
@@ -113,7 +89,7 @@ The supported handlers are as follows..
 ### Middleware handlers
 
 ```go
-// Standard HTTP middleware. Perfect for when a request context isn't required for signaling.
+// Standard HTTP middleware. Compatible and friendly for when a request context isn't needed.
 func StdMiddleware(next http.Handler) http.Handler {
   return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     next.ServeHTTP(w, r)
@@ -144,7 +120,7 @@ func StdHandler(w http.ResponseWriter, r *http.Request) {
 ```go
 // net/context HTTP request handler
 func CtxHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-  userID := chi.URLParams(ctx)["userID"].(string) // from a route like /users/:userID
+  userID := chi.URLParams(ctx)["userID"] // from a route like /users/:userID
   key := ctx.Value("key").(string)
   w.Write([]byte(fmt.Sprintf("hi %v, %v", userID, key)))
 }
@@ -153,7 +129,7 @@ func CtxHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 ## net/context?
 
 `net/context` is a tiny library written by [Sameer Ajmani](https://github.com/Sajmani) that provides
-a simple interface to signal context across goroutines.
+a simple interface to signal context across call stacks and goroutines.
 
 Learn more at https://blog.golang.org/context
 
@@ -192,16 +168,16 @@ func main() {
   r.Use(middleware.CloseNotify)
 
   // Set a timeout value on the request context (ctx), that will signal
-  // through ctx.Done() that the request has timed out, is cancelled and
-  // further processing should be stopped.
+  // through ctx.Done() that the request has timed out and further
+  // processing should be stopped.
   r.Use(middleware.Timeout(60 * time.Second))
 
   r.Get("/", func(w http.ResponseWriter, r *http.Request) {
     w.Write([]byte("hi"))
   })
 
-  // REST routes for "articles" resource
-  r.Route("/articles", func(r cji.Router) {
+  // RESTy routes for "articles" resource
+  r.Route("/articles", func(r chi.Router) {
     r.Get("/", paginate, listArticles)  // GET /articles
     r.Post("/", createArticle)          // POST /articles
 
@@ -209,7 +185,7 @@ func main() {
       r.Use(ArticleCtx)
       r.Get("/", getArticle)            // GET /articles/123
       r.Put("/", updateArticle)         // PUT /articles/123
-      r.Delete("/", deleteArticle)      // DELETE /article/123
+      r.Delete("/", deleteArticle)      // DELETE /articles/123
     })
   })
 
@@ -221,13 +197,13 @@ func main() {
 
 func ArticleCtx(next chi.Handler) chi.Handler {
   return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-    articleID := chi.URLParams(ctx)["articleID"].(string)
+    articleID := chi.URLParams(ctx)["articleID"]
     article, err := dbGetArticle(articleID)
     if err != nil {
-      w.WriteHeader(404)
+      http.Error(w, http.StatusText(404), 404)
       return
     }
-    ctx = ctx.WithValue(ctx, "article", article)
+    ctx = context.WithValue(ctx, "article", article)
     next.ServeHTTPC(ctx, w, r)
   })
 }
@@ -235,7 +211,7 @@ func ArticleCtx(next chi.Handler) chi.Handler {
 func getArticle(ctx context.Context, w http.ResponseWriter, r *http.Request) {
   article, ok := ctx.Value("article").(*Article)
   if !ok {
-    w.WriteHeader(422)
+    http.Error(w, http.StatusText(422), 422)
     return
   }
   w.Write([]byte(fmt.Sprintf("title:%s", article.Title)))
@@ -252,9 +228,9 @@ func adminRouter() chi.Router {
 
 func AdminOnly(next chi.Handler) chi.Handler {
   return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-    perm := ctx.Value("acl.permission").(PermissionThing)
-    if !perm.IsAdmin() {
-      w.WriteHeader(403)
+    perm, ok := ctx.Value("acl.permission").(YourPermissionType)
+    if !ok || !perm.IsAdmin() {
+      http.Error(w, http.StatusText(403), 403)
       return
     }
     next.ServeHTTPC(ctx, w, r)
@@ -272,12 +248,12 @@ Chi comes equipped with an optional `middleware` package, providing:
 |:------------|:---------------------------------------------------------------------------------
 | RequestID   | Injects a request ID into the context of each request.                          |
 | RealIP      | Sets a http.Request's RemoteAddr to either X-Forwarded-For or X-Real-IP.        |
-| Logger      | Log the start and end of each request with the elapsed processing time.         |
-| Recoverer   | Gracefully absorb panics and print the stack trace.                             |
-| NoCache     | Set response headers to prevent clients from caching.                           |
+| Logger      | Logs the start and end of each request with the elapsed processing time.        |
+| Recoverer   | Gracefully absorb panics and prints the stack trace.                            |
+| NoCache     | Sets response headers to prevent clients from caching.                          |
 | CloseNotify | Signals to the request context when a client has closed their connection.       |
 | Timeout     | Signals to the request context when the timeout deadline is reached.            |
-| Throttle    | Put a ceiling on the number of concurrent requests.                             |
+| Throttle    | Puts a ceiling on the number of concurrent requests.                            |
 -------------------------------------------------------------------------------------------------
 
 Other middlewares:
@@ -290,9 +266,11 @@ please submit a PR if you'd like to include a link to a chi middleware
 
 ## Future
 
-We're hopefully that by Go 1.7 (in 2016), `net/context` will be in the Go stdlib and net/http will
-support context.Context natively, at which point we'll be updating the signatures to embrace the
-future stdlib. And... then, we have infinitely more middlewares to compose from the community!!
+We're hoping that by Go 1.7 (in 2016), `net/context` will be in the Go stdlib and `net/http` will
+support `context.Context`. You'll notice that chi.Handler and http.Handler are very similar
+and the middleware signatures follow the same structure. One day chi.Handler will be deprecated
+and the router will live on just as it is without any dependencies beyond stdlib. And... then, we
+have infinitely more middlewares to compose from the community!!
 
 See discussions:
 * https://github.com/golang/go/issues/13021
@@ -324,7 +302,7 @@ See discussions:
 
 ## License
 
-Copyright (c) 2015 Peter Kieltyka (https://twitter.com/peterk)
+Copyright (c) 2015 Peter Kieltyka - [github.com/pkieltyka](https://github.com/pkieltyka)
 
 MIT License
 

@@ -1,6 +1,6 @@
 github.com/BurntSushi/toml 056c9bc7be7190eaa7715723883caffa5f8fa3e4
 github.com/PuerkitoBio/purell d69616f51cdfcd7514d6a380847a152dfc2a749d
-github.com/Sirupsen/logrus 62f85a2e398fb4cae34ecd1db528422ede248d3c
+github.com/Sirupsen/logrus fe6f2b03125e4fcafb21406381010e363a072c80
 github.com/boltdb/bolt ee716d1410cb44d1a6b7e59a96a2b2bec23366a9
 github.com/garyburd/redigo 7ec56c98db25aa5eeed5e028188fda8fe6fb4bf3
 github.com/gographics/imagick c6550b4905b504ab8377d15bf444b34c4f7e34e9
@@ -11,7 +11,7 @@ github.com/goware/urlx 6292537e62efc11517f237ed166bd105c6b44aa8
 github.com/mitchellh/goamz caaaea8b30ee15616494ee68abd5d8ebbbef05cf
 github.com/opennota/urlesc 5fa9ff0392746aeae1c4b37fcc42c65afa7a9587
 github.com/pressly/chainstore 907f0f81699a835e86a81f11a3d3cd4d7215c360
-github.com/pressly/chi 5f47481894f2835e1d30b63bbef3aae5abd752a7
+github.com/pressly/chi fffe601cb0dece53671b9332886a6a0028d2dae4
 github.com/pressly/consistentrd 43f3d1020fc03cf1271313ec9b95c8a967c0b878
 github.com/pressly/go-metrics 5102e4a6cd4b8cfea15ea9fb9e62809cd8372f50
 github.com/rcrowley/go-metrics 1ce93efbc8f9c568886b2ef85ce305b2217b3de3
@@ -20,5 +20,5 @@ github.com/tobi/airbrake-go a3cdd910a3ffef88a20fbecc10363a520ad61a0a
 github.com/unrolled/render aa61028b1d32873eaa3e261a3ef0e892a153107b
 github.com/vaughan0/go-ini a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
 github.com/zenazn/goji 46b46e00f46dda650e04f0bceeb7c40732cd5988
-golang.org/x/net 2cba614e8ff920c60240d2677bc019af32ee04e5
+golang.org/x/net 1b27761f1cd4840a914b5255e4357385091562e5
 stathat.com/c/consistent 748f01b59d1b2218efe39513039e9ee31266d7c7
