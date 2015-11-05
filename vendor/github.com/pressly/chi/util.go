@@ -65,16 +65,14 @@ func mwrap(middleware interface{}) func(Handler) Handler {
 
 	case func(http.Handler) http.Handler:
 		return func(next Handler) Handler {
-			hfn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ww := w.(contextResponseWriter)
-				next.ServeHTTPC(ww.ctx, w, r)
-			})
-			mfn := mw(hfn)
-
 			return HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-				mfn.ServeHTTP(contextResponseWriter{ctx, w}, r)
+				wfn := func(w http.ResponseWriter, r *http.Request) {
+					next.ServeHTTPC(ctx, w, r)
+				}
+				mw(http.HandlerFunc(wfn)).ServeHTTP(w, r)
 			})
 		}
+
 	}
 }
 
@@ -89,8 +87,6 @@ func assertMiddleware(middleware interface{}) interface{} {
 	return middleware
 }
 
-// Context based http.ResponseWriter used to carry the ctx value through
-// a standard middleware handler.
 type contextResponseWriter struct {
 	ctx context.Context
 	http.ResponseWriter
