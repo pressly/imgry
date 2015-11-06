@@ -295,6 +295,8 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		}
 	}
 
+	i.mw = i.mw.DeconstructImages()
+
 	return nil
 }
 
