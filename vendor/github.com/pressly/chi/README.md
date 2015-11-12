@@ -1,5 +1,7 @@
-chi [![GoDoc](https://godoc.org/github.com/pressly/chi?status.svg)](https://godoc.org/github.com/pressly/chi)
+chi
 ===
+
+[![GoDoc Widget]][GoDoc] [![Travis Widget]][Travis]
 
 `chi` is a small, fast and expressive router / mux for Go HTTP services built with net/context.
 
@@ -18,7 +20,7 @@ scaled very well.
 ## Features
 
 * Lightweight - cloc`d in ~600 LOC for the chi router
-* Fast - yes, benchmarks coming
+* Fast - yes, see [benchmarks](#benchmarks)
 * Expressive routing - middlewares, inline middleware groups/chains, and subrouter mounting
 * Request context control (value chaining, deadlines and timeouts) - built on `net/context`
 * Robust (tested, used in production)
@@ -261,7 +263,7 @@ Other middlewares:
 * [httpcoala](https://github.com/goware/httpcoala) - request coalescer
 * [jwtauth](https://github.com/goware/jwtauth) - JWT authenticator
 
-please submit a PR if you'd like to include a link to a chi middleware
+please [submit a PR](./CONTRIBUTING.md) if you'd like to include a link to a chi middleware
 
 
 ## Future
@@ -275,6 +277,16 @@ have infinitely more middlewares to compose from the community!!
 See discussions:
 * https://github.com/golang/go/issues/13021
 * https://groups.google.com/forum/#!topic/golang-dev/cQs1z9LrJDU
+
+
+## Benchmarks
+
+The benchmark suite: https://github.com/pkieltyka/go-http-routing-benchmark
+
+The results as of Nov. 6, 2015 - https://gist.github.com/pkieltyka/505b07b09f5c63e36ef5
+
+Note: by design, chi allocates new routing URLParams map for each request, as opposed
+to reusing URLParams from a pool.
 
 
 ## Credits
@@ -299,26 +311,15 @@ See discussions:
 * Websocket example
 * Regexp support in router "/:id([0-9]+)" or "#id^[0-9]+$" or ..
 
+We'll be more than happy to see [your contributions](./CONTRIBUTING.md)!
 
 ## License
 
-Copyright (c) 2015 Peter Kieltyka - [github.com/pkieltyka](https://github.com/pkieltyka)
+Copyright (c) 2015 [Peter Kieltyka](https://github.com/pkieltyka)
 
-MIT License
+Licensed under [MIT License](./LICENSE)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+[GoDoc]: https://godoc.org/github.com/pressly/chi
+[GoDoc Widget]: https://godoc.org/github.com/pressly/chi?status.svg
+[Travis]: https://travis-ci.org/pressly/chi
+[Travis Widget]: https://travis-ci.org/pressly/chi.svg?branch=master

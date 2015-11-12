@@ -41,6 +41,9 @@ func TestTree(t *testing.T) {
 
 	tr.Insert("/", hIndex)
 	tr.Insert("/favicon.ico", hFavicon)
+
+	tr.Insert("/pages/*", hStub)
+
 	tr.Insert("/article", hArticleList)
 	tr.Insert("/article/", hArticleList) // redirect..?
 
@@ -96,6 +99,10 @@ func TestTree(t *testing.T) {
 	}{
 		{r: "/", h: hIndex, p: emptyParams},
 		{r: "/favicon.ico", h: hFavicon, p: emptyParams},
+
+		{r: "/pages", h: nil, p: emptyParams},
+		{r: "/pages/", h: hStub, p: map[string]string{"*": ""}},
+		{r: "/pages/yes", h: hStub, p: map[string]string{"*": "yes"}},
 
 		{r: "/article", h: hArticleList, p: emptyParams},
 		{r: "/article/", h: hArticleList, p: emptyParams},
@@ -169,7 +176,7 @@ func debugPrintTree(parent int, i int, n *node, label byte) bool {
 	return false
 }
 
-func BenchmarkXTreeGet(b *testing.B) {
+func BenchmarkTreeGet(b *testing.B) {
 	h1 := HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {})
 	h2 := HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {})
 
@@ -187,8 +194,29 @@ func BenchmarkXTreeGet(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		var params map[string]string
-		// tr.Find("/ping/123/456", params)
-		tr.Find("/ping", params)
+		params := map[string]string{}
+		tr.Find("/ping/123/456", params)
+		// tr.Find("/pingggg", params)
 	}
 }
+
+// func BenchmarkMuxGet(b *testing.B) {
+// 	h1 := HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {})
+// 	h2 := HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {})
+// 	h3 := HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {})
+//
+// 	mx := NewRouter()
+// 	mx.Get("/", h1)
+// 	mx.Get("/hi", h2)
+// 	mx.Get("/sup/:id/and/:this", h3)
+//
+// 	w := new(mockResponseWriter)
+// 	r, _ := http.NewRequest("GET", "/sup/123/and/this", nil)
+//
+// 	b.ReportAllocs()
+// 	b.ResetTimer()
+//
+// 	for i := 0; i < b.N; i++ {
+// 		mx.ServeHTTP(w, r)
+// 	}
+// }

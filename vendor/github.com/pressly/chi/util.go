@@ -72,7 +72,6 @@ func mwrap(middleware interface{}) func(Handler) Handler {
 				mw(http.HandlerFunc(wfn)).ServeHTTP(w, r)
 			})
 		}
-
 	}
 }
 
@@ -85,9 +84,4 @@ func assertMiddleware(middleware interface{}) interface{} {
 	case func(Handler) Handler:
 	}
 	return middleware
-}
-
-type contextResponseWriter struct {
-	ctx context.Context
-	http.ResponseWriter
 }

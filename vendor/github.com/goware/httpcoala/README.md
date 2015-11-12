@@ -23,7 +23,7 @@ Example with goji
 ```go
 // from _example/main.go ....
 func main() {
-	r := cji.NewRouter()
+	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
 	r.Use(httpcoala.Route("HEAD", "GET")) // or, Route("*")

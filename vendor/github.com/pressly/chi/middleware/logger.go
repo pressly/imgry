@@ -25,16 +25,13 @@ import (
 func Logger(next chi.Handler) chi.Handler {
 	fn := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		reqID := GetReqID(ctx)
-		printStart(reqID, r)
-
+		prefix := requestPrefix(reqID, r)
 		lw := wrapWriter(w)
 
 		t1 := time.Now()
-
 		defer func() {
 			t2 := time.Now()
-
-			printEnd(reqID, lw, t2.Sub(t1))
+			printRequest(prefix, reqID, lw, t2.Sub(t1))
 		}()
 
 		next.ServeHTTPC(ctx, lw, r)
@@ -43,57 +40,52 @@ func Logger(next chi.Handler) chi.Handler {
 	return chi.HandlerFunc(fn)
 }
 
-func printStart(reqID string, r *http.Request) {
-	var buf bytes.Buffer
+func requestPrefix(reqID string, r *http.Request) *bytes.Buffer {
+	buf := &bytes.Buffer{}
 
 	if reqID != "" {
-		cW(&buf, nYellow, "[%s] ", reqID)
+		cW(buf, nYellow, "[%s] ", reqID)
 	}
-	buf.WriteString("Started ")
-	cW(&buf, bMagenta, "%s ", r.Method)
-	cW(&buf, nBlue, "%q ", r.URL.String())
+	cW(buf, nCyan, "\"")
+	cW(buf, bMagenta, "%s ", r.Method)
+	cW(buf, nCyan, "%s %s\" ", r.URL.String(), r.Proto)
 	buf.WriteString("from ")
 	buf.WriteString(r.RemoteAddr)
+	buf.WriteString(" - ")
 
-	log.Print(buf.String())
+	return buf
 }
 
-func printEnd(reqID string, w writerProxy, dt time.Duration) {
-	var buf bytes.Buffer
-
-	if reqID != "" {
-		cW(&buf, nYellow, "[%s] ", reqID)
-	}
-
+func printRequest(buf *bytes.Buffer, reqID string, w writerProxy, dt time.Duration) {
 	status := w.Status()
 	if status == StatusClientClosedRequest {
-		buf.WriteString("Client ")
-		cW(&buf, bRed, "disconnected")
+		cW(buf, bRed, "[disconnected]")
 	} else {
-		buf.WriteString("Returning ")
 		switch {
 		case status == basicWriterUnknownStatus:
-			cW(&buf, bBlue, "200") // Implicit code sent by net pkg.
+			cW(buf, bBlue, "200") // Implicit code sent by net pkg.
 		case status < 200:
-			cW(&buf, bBlue, "%03d", status)
+			cW(buf, bBlue, "%03d", status)
 		case status < 300:
-			cW(&buf, bGreen, "%03d", status)
+			cW(buf, bGreen, "%03d", status)
 		case status < 400:
-			cW(&buf, bCyan, "%03d", status)
+			cW(buf, bCyan, "%03d", status)
 		case status < 500:
-			cW(&buf, bYellow, "%03d", status)
+			cW(buf, bYellow, "%03d", status)
 		default:
-			cW(&buf, bRed, "%03d", status)
+			cW(buf, bRed, "%03d", status)
 		}
 	}
 
+	cW(buf, bBlue, " %dB", w.BytesWritten())
+
 	buf.WriteString(" in ")
 	if dt < 500*time.Millisecond {
-		cW(&buf, nGreen, "%s", dt)
+		cW(buf, nGreen, "%s", dt)
 	} else if dt < 5*time.Second {
-		cW(&buf, nYellow, "%s", dt)
+		cW(buf, nYellow, "%s", dt)
 	} else {
-		cW(&buf, nRed, "%s", dt)
+		cW(buf, nRed, "%s", dt)
 	}
 
 	log.Print(buf.String())

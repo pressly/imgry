@@ -27,18 +27,17 @@ func ParentContext(parent context.Context) func(next chi.Handler) chi.Handler {
 
 // Airbrake recoverer middleware to capture and report any panics to
 // airbrake.io.
-func AirbrakeRecoverer(apiKey string) func(http.Handler) http.Handler {
+func AirbrakeRecoverer(apiKey string) func(chi.Handler) chi.Handler {
 	airbrake.ApiKey = apiKey
-	f := func(h http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
+
+	return func(next chi.Handler) chi.Handler {
+		return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			if apiKey != "" {
 				defer airbrake.CapturePanic(r)
 			}
-			h.ServeHTTP(w, r)
-		}
-		return http.HandlerFunc(fn)
+			next.ServeHTTPC(ctx, w, r)
+		})
 	}
-	return f
 }
 
 func Profiler() http.Handler {
