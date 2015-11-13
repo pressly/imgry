@@ -1,6 +1,7 @@
 package imagick
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -47,4 +48,117 @@ func TestGetImageInfo(t *testing.T) {
 	assert.Equal(t, imfo.Height, 1200)
 	assert.True(t, float64(int(imfo.AspectRatio*1000))/1000 == 1.333)
 	assert.True(t, imfo.ContentLength == 451317)
+}
+
+func TestIssue8GIFResize(t *testing.T) {
+	var sz *imgry.Sizing
+	var img imgry.Image
+	var err error
+
+	ng := Engine{}
+
+	img, err = ng.LoadFile("../testdata/issue-8.gif")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 131, img.Width())
+	assert.Equal(t, 133, img.Height())
+
+	origSize := len(img.Data())
+	assert.Equal(t, 393324, origSize)
+
+	img.Release()
+
+	// Resizing to 750, which is slightly smaller.
+	img, err = ng.LoadFile("../testdata/issue-8.gif")
+	assert.NoError(t, err)
+
+	sz, _ = imgry.NewSizingFromQuery("size=750x")
+	err = img.SizeIt(sz)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 750, img.Width())
+	assert.Equal(t, 422, img.Height())
+
+	// We should be able to expect this someday, but for now it seems like the
+	// number of colors after resizing affect the size of the file.
+	//
+	// See http://www.imagemagick.org/discourse-server/viewtopic.php?t=22505#p93859
+	//assert.True(t, len(img.Data()) < origSize, fmt.Sprintf("Expecting %d < %d.", len(img.Data()), origSize))
+
+	err = img.WriteToFile("../testdata/issue-8.700.gif")
+	assert.NoError(t, err)
+
+	img.Release()
+
+	// Resizing to 500, which is smaller.
+	img, err = ng.LoadFile("../testdata/issue-8.gif")
+	assert.NoError(t, err)
+
+	sz, _ = imgry.NewSizingFromQuery("size=500x")
+	err = img.SizeIt(sz)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 500, img.Width())
+	assert.Equal(t, 282, img.Height())
+
+	assert.True(t, len(img.Data()) < origSize, fmt.Sprintf("Expecting %d < %d.", len(img.Data()), origSize))
+
+	err = img.WriteToFile("../testdata/issue-8.500.gif")
+	assert.NoError(t, err)
+
+	img.Release()
+
+	// Resizing to 900, which is larger.
+	img, err = ng.LoadFile("../testdata/issue-8.gif")
+	assert.NoError(t, err)
+
+	sz, _ = imgry.NewSizingFromQuery("size=900x")
+	err = img.SizeIt(sz)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 900, img.Width())
+	assert.Equal(t, 507, img.Height())
+
+	assert.True(t, len(img.Data()) > origSize, fmt.Sprintf("Expecting %d > %d.", len(img.Data()), origSize))
+
+	err = img.WriteToFile("../testdata/issue-8.900.gif")
+	assert.NoError(t, err)
+
+	img.Release()
+
+	// Resizing to 200, which is smaller.
+	img, err = ng.LoadFile("../testdata/issue-8.gif")
+	assert.NoError(t, err)
+
+	sz, _ = imgry.NewSizingFromQuery("size=200x")
+	err = img.SizeIt(sz)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 200, img.Width())
+	assert.Equal(t, 113, img.Height())
+
+	assert.True(t, len(img.Data()) < origSize, fmt.Sprintf("Expecting %d < %d.", len(img.Data()), origSize))
+
+	err = img.WriteToFile("../testdata/issue-8.200.gif")
+	assert.NoError(t, err)
+
+	img.Release()
+
+	// Resizing to 150, which is smaller.
+	img, err = ng.LoadFile("../testdata/issue-8.gif")
+	assert.NoError(t, err)
+
+	sz, _ = imgry.NewSizingFromQuery("size=150x")
+	err = img.SizeIt(sz)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 150, img.Width())
+	assert.Equal(t, 84, img.Height())
+
+	assert.True(t, len(img.Data()) < origSize, fmt.Sprintf("Expecting %d < %d.", len(img.Data()), origSize))
+
+	err = img.WriteToFile("../testdata/issue-8.150.gif")
+	assert.NoError(t, err)
+
+	img.Release()
 }

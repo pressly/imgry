@@ -245,9 +245,9 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		return nil
 	}
 
-	// TODO: instead of Coalesce, better to change the offsets.
-	// This is required for animated image resizing
-	if !sz.Flatten && i.mw.GetNumberImages() > 1 {
+	coalesceAndDeconstruct := !sz.Flatten && i.mw.GetNumberImages() > 1
+
+	if coalesceAndDeconstruct {
 		i.mw = i.mw.CoalesceImages()
 	}
 
@@ -293,6 +293,12 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		if sz.Flatten {
 			break
 		}
+	}
+
+	if coalesceAndDeconstruct {
+		// Compares each frame of the image, removes pixels that are already on the
+		// background and updates offsets accordingly.
+		i.mw = i.mw.DeconstructImages()
 	}
 
 	return nil
