@@ -4,14 +4,14 @@ FROM golang:1.5.1
 RUN apt-get update && apt-get install --no-install-recommends -y build-essential \
     zlib1g-dev pkg-config
 
-# Install libturbo-jpeg 1.4.0
-ADD http://sourceforge.net/projects/libjpeg-turbo/files/1.4.0/libjpeg-turbo-official_1.4.0_amd64.deb/download /tmp/libjpeg-turbo-official_1.4.0_amd64.deb
-RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.4.0_amd64.deb && \
+# Install libturbo-jpeg 1.4.2
+ADD http://sourceforge.net/projects/libjpeg-turbo/files/1.4.2/libjpeg-turbo-official_1.4.2_amd64.deb/download /tmp/libjpeg-turbo-official_1.4.2_amd64.deb
+RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.4.2_amd64.deb && \
     echo /opt/libjpeg-turbo/lib64 > /etc/ld.so.conf.d/libjpeg-turbo.conf && ldconfig
 
-# Install libpng 1.6.7
-ADD http://downloads.sourceforge.net/project/libpng/libpng16/1.6.17/libpng-1.6.17.tar.gz /tmp/
-RUN cd /tmp && tar -zxvf libpng-1.6.17.tar.gz && cd libpng-1.6.17 && \
+# Install libpng 1.6.19
+ADD http://downloads.sourceforge.net/project/libpng/libpng16/1.6.19/libpng-1.6.19.tar.gz /tmp/
+RUN cd /tmp && tar -zxvf libpng-1.6.19.tar.gz && cd libpng-1.6.19 && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
 ADD http://www.imagemagick.org/download/releases/ImageMagick-6.9.2-5.tar.xz /tmp/
