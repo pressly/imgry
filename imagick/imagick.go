@@ -249,7 +249,6 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 	}
 
 	coalesceAndDeconstruct := !sz.Flatten && i.mw.GetNumberImages() > 1
-
 	if coalesceAndDeconstruct {
 		i.mw = i.mw.CoalesceImages()
 	}
@@ -259,15 +258,14 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		canvas = imagick.NewMagickWand()
 		bg = imagick.NewPixelWand()
 		bg.SetColor("transparent")
+
+		defer func() {
+			bg.Destroy()
+			if canvas != nil && canvas != i.mw {
+				canvas.Destroy()
+			}
+		}()
 	}
-
-	defer func() {
-		bg.Destroy()
-
-		if canvas != nil && canvas != i.mw {
-			canvas.Destroy()
-		}
-	}()
 
 	i.mw.SetFirstIterator()
 	for n := true; n; n = i.mw.NextImage() {
