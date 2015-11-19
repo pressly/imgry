@@ -261,6 +261,14 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		bg.SetColor("transparent")
 	}
 
+	defer func() {
+		bg.Destroy()
+
+		if canvas != nil && canvas != i.mw {
+			canvas.Destroy()
+		}
+	}()
+
 	i.mw.SetFirstIterator()
 	for n := true; n; n = i.mw.NextImage() {
 		pw, ph := int(i.mw.GetImageWidth()), int(i.mw.GetImageHeight())
@@ -300,7 +308,7 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 			i.mw.ResetImagePage("")
 		}
 
-		// If we have a canvas we put the image at the center of it.
+		// If we have a canvas we put the image at its center.
 		if canvas != nil {
 			canvas.NewImage(uint(sz.Canvas.Width), uint(sz.Canvas.Height), bg)
 			canvas.SetImageBackgroundColor(bg)

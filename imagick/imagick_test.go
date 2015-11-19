@@ -395,3 +395,41 @@ func TestIssue10OpFittedGIF(t *testing.T) {
 	})
 
 }
+
+func TestIssue10OpFittedTestForLeaks(t *testing.T) {
+
+	testimage := func(fn func(img imgry.Image) error) {
+		var img imgry.Image
+		var err error
+		ng := Engine{}
+
+		img, err = ng.LoadFile("../testdata/issue-10-p.gif")
+		assert.NoError(t, err)
+
+		assert.Equal(t, 48, img.Width())
+		assert.Equal(t, 64, img.Height())
+
+		err = fn(img)
+		assert.NoError(t, err)
+
+		img.Release()
+	}
+
+	for i := 0; i < 200; i++ {
+
+		testimage(func(img imgry.Image) (err error) {
+			sz, _ := imgry.NewSizingFromQuery("size=200x&canvas=150x120&op=fitted")
+			err = img.SizeIt(sz)
+			assert.NoError(t, err)
+
+			assert.Equal(t, 150, img.Width())
+			assert.Equal(t, 120, img.Height())
+
+			err = img.WriteToFile("../testdata/issue-10-p-leak.gif")
+			assert.NoError(t, err)
+
+			return
+		})
+	}
+
+}
