@@ -329,3 +329,17 @@ func TestToQuery2(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, expected, result)
 }
+
+func TestIssue10Canvas(t *testing.T) {
+	sz := NewSizing()
+	sz.Size = &Rect{100, 200}
+	sz.Op = "fitted"
+	sz.Canvas = &Rect{320, 300}
+	sz.Format = "png"
+	sz.Granularity = 13
+
+	result := sz.ToQuery()
+	expected, err := url.ParseQuery("s=100x200&op=fitted&canvas=320x300&format=png&g=13")
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}

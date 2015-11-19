@@ -17,10 +17,15 @@ var (
 	DefaultSizingGranularity = 10
 )
 
+const (
+	canvasMaxSize int = 1024
+)
+
 type Sizing struct {
 	Size       *Rect         // The asking image size
 	CropBox    *FloatingRect // The asking image crop box (as percentages)
 	FocalPoint *FloatPoint   // The asking image focal point (as percentages)
+	Canvas     *Rect
 
 	Op          string
 	Format      string
@@ -78,6 +83,8 @@ func (sz *Sizing) CalcResizeRect(srcSize *Rect) (resizedRect *Rect, cropRect *Re
 		resizedRect, cropRect, cropOrigin = sz.coverOp(srcSize)
 	case "balance":
 		resizedRect, cropRect, cropOrigin = sz.balanceOp(srcSize)
+	case "fitted":
+		resizedRect, cropRect, cropOrigin = sz.fitted(srcSize)
 	default:
 		resizedRect, cropRect, cropOrigin = sz.exactOp(srcSize)
 	}
@@ -107,6 +114,19 @@ func (sz *Sizing) containOp(srcSize *Rect) (*Rect, *Rect, *image.Point) {
 
 func (sz *Sizing) contain2Op(srcSize *Rect) (*Rect, *Rect, *image.Point) {
 	return sz.calcScaledSize(srcSize, true), nil, nil
+}
+
+func (sz *Sizing) fitted(srcSize *Rect) (*Rect, *Rect, *image.Point) {
+	size := sz.calcScaledSize(srcSize, false)
+	if sz.Canvas != nil {
+		ratio := math.Min(float64(sz.Canvas.Width)/float64(size.Width), float64(sz.Canvas.Height)/float64(size.Height))
+		if ratio < 1 {
+			// This means the canvas is smaller than the source image.
+			size.Width = int(float64(size.Width) * ratio)
+			size.Height = int(float64(size.Height) * ratio)
+		}
+	}
+	return size, nil, nil
 }
 
 func (sz *Sizing) expandOp(srcSize *Rect) (*Rect, *Rect, *image.Point) {
@@ -243,6 +263,17 @@ func (sz *Sizing) SetFromQuery(q string) error {
 		}
 	}
 
+	// Canvas size
+	canvas := query.Get("canvas")
+	if canvas != "" && canvas != "x" {
+		sz.Canvas, err = NewRectFromQuery(canvas)
+		if err != nil {
+			return err
+		}
+		sz.Canvas.Width = min(sz.Canvas.Width, canvasMaxSize)
+		sz.Canvas.Height = min(sz.Canvas.Height, canvasMaxSize)
+	}
+
 	// Sizing operation
 	sz.Op = query.Get("op")
 
@@ -309,6 +340,9 @@ func (sz *Sizing) ToQuery() url.Values {
 
 	if !sz.Size.Equal(ZeroRect) {
 		u.Add("s", sz.Size.ToString())
+	}
+	if sz.Canvas != nil {
+		u.Add("canvas", sz.Canvas.ToString())
 	}
 	if sz.Op != "" {
 		u.Add("op", sz.Op)
