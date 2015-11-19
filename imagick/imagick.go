@@ -240,6 +240,9 @@ func (i *Image) SizeIt(sz *imgry.Sizing) error {
 }
 
 func (i *Image) sizeFrames(sz *imgry.Sizing) error {
+	var canvas *imagick.MagickWand
+	var bg *imagick.PixelWand
+
 	// Shortcut if there is nothing to size
 	if sz.Size.Equal(imgry.ZeroRect) && sz.CropBox.Equal(imgry.ZeroFloatingRect) {
 		return nil
@@ -251,9 +254,15 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		i.mw = i.mw.CoalesceImages()
 	}
 
+	if sz.Canvas != nil {
+		// If the user requested a canvas.
+		canvas = imagick.NewMagickWand()
+		bg = imagick.NewPixelWand()
+		bg.SetColor("transparent")
+	}
+
 	i.mw.SetFirstIterator()
 	for n := true; n; n = i.mw.NextImage() {
-
 		pw, ph := int(i.mw.GetImageWidth()), int(i.mw.GetImageHeight())
 		srcSize := imgry.NewRect(pw, ph)
 
@@ -262,6 +271,7 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		if err != nil {
 			return err
 		}
+
 		if cropBox != nil && cropOrigin != nil && !cropBox.Equal(imgry.ZeroRect) {
 			err := i.mw.CropImage(uint(cropBox.Width), uint(cropBox.Height), cropOrigin.X, cropOrigin.Y)
 			if err != nil {
@@ -290,9 +300,26 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 			i.mw.ResetImagePage("")
 		}
 
+		// If we have a canvas we put the image at the center of it.
+		if canvas != nil {
+			canvas.NewImage(uint(sz.Canvas.Width), uint(sz.Canvas.Height), bg)
+			canvas.SetImageBackgroundColor(bg)
+			canvas.SetImageFormat(i.mw.GetImageFormat())
+
+			x := (sz.Canvas.Width - int(i.mw.GetImageWidth())) / 2
+			y := (sz.Canvas.Height - int(i.mw.GetImageHeight())) / 2
+			canvas.CompositeImage(i.mw, imagick.COMPOSITE_OP_OVER, x, y)
+			canvas.ResetImagePage("")
+		}
+
 		if sz.Flatten {
 			break
 		}
+	}
+
+	if canvas != nil {
+		i.mw.Destroy()
+		i.mw = canvas
 	}
 
 	if coalesceAndDeconstruct {
