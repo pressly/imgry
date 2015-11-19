@@ -2,4 +2,6 @@
 bin/
 cmd/imgry-server/tmp/
 etc/imgry.conf
-
+*.sw?
+testdata/issue-8.*
+testdata/issue-10-*
