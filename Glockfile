@@ -22,4 +22,4 @@ github.com/vaughan0/go-ini a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
 github.com/zenazn/goji 46b46e00f46dda650e04f0bceeb7c40732cd5988
 golang.org/x/net 042ba42fa6633b34205efc66ba5719cd3afd8d38
 stathat.com/c/consistent 748f01b59d1b2218efe39513039e9ee31266d7c7
-github.com/rs/cors ceb1fbf238d7711a11a86a2622d0b85305348aeb
+github.com/rs/cors eb527c8097e0f19a3ff7b253a3fe70545070f420
