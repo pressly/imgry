@@ -101,17 +101,6 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
-
-	cors := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
-	})
-	r.Use(cors.Handler)
-
 	r.Use(httpcoala.Route("HEAD", "GET"))
 
 	r.Use(heartbeat.Route("/ping"))
@@ -134,8 +123,21 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Route("/:bucket", func(r chi.Router) {
 		r.Post("/", BucketImageUpload)
-		r.Get("/", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketGetIndex)
-		r.Get("/fetch", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketFetchItem)
+
+		r.Group(func(r chi.Router) {
+			cors := cors.New(cors.Options{
+				AllowedOrigins:   []string{"*"},
+				AllowedMethods:   []string{"GET", "OPTIONS"},
+				AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+				ExposedHeaders:   []string{"Link"},
+				AllowCredentials: true,
+				MaxAge:           300, // Maximum value not ignored by any of major browsers
+			})
+			r.Use(cors.Handler)
+
+			r.Get("/", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketGetIndex)
+			r.Get("/fetch", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketFetchItem)
+		})
 
 		// TODO: review
 		r.Get("/add", trackRoute("bucketAddItems"), BucketAddItems)
