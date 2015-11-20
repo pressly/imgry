@@ -12,6 +12,7 @@ import (
 	"github.com/pressly/consistentrd"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
+	"github.com/rs/cors"
 	"golang.org/x/net/context"
 )
 
@@ -100,6 +101,17 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
+
+	cors := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	})
+	r.Use(cors.Handler)
+
 	r.Use(httpcoala.Route("HEAD", "GET"))
 
 	r.Use(heartbeat.Route("/ping"))
