@@ -7,8 +7,8 @@ import (
 	"net/http/pprof"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/pressly/chi"
-	"github.com/rcrowley/go-metrics"
 	"github.com/tobi/airbrake-go"
 	"golang.org/x/net/context"
 )
@@ -86,19 +86,16 @@ func (l *wrappedResponseWriter) Status() int {
 func trackRoute(metricID string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		route := fmt.Sprintf("route.%s", metricID)
-
-		routeTimer := metrics.GetOrRegisterTimer(route, nil)
-		errCounter := metrics.GetOrRegisterCounter(fmt.Sprintf("%s-err", route), nil)
+		errRoute := fmt.Sprintf("%s-err", route)
 
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			reqStart := time.Now()
+			defer metrics.MeasureSince([]string{route}, time.Now())
 
 			lw := &wrappedResponseWriter{w, -1}
 			next.ServeHTTP(lw, r)
 
-			routeTimer.UpdateSince(reqStart)
 			if lw.Status() >= 400 {
-				errCounter.Inc(1)
+				metrics.IncrCounter([]string{errRoute}, 1)
 			}
 		}
 		return http.HandlerFunc(handler)

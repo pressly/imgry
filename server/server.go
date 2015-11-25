@@ -53,7 +53,7 @@ func (srv *Server) Configure() (err error) {
 		return err
 	}
 
-	if err := srv.Config.SetupLibrato(); err != nil {
+	if err := srv.Config.SetupStatsD(); err != nil {
 		return err
 	}
 

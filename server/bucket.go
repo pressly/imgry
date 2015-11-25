@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
-	"github.com/rcrowley/go-metrics"
 	"golang.org/x/net/context"
 )
 
@@ -109,8 +109,7 @@ func (b *Bucket) AddImage(ctx context.Context, i *Image) (err error) {
 }
 
 func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Sizing) (*Image, error) {
-	m := metrics.GetOrRegisterTimer("fn.bucket.GetImageSize", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.bucket.GetImageSize"}, time.Now())
 
 	// Find the original image
 	origIm, err := b.DbFindImage(ctx, key, nil)
@@ -146,8 +145,7 @@ func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Siz
 
 // Loads the image from our table+data store with optional sizing
 func (b *Bucket) DbFindImage(ctx context.Context, key string, optSizing ...*imgry.Sizing) (*Image, error) {
-	m := metrics.GetOrRegisterTimer("fn.bucket.DbFindImage", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.bucket.DbFindImage"}, time.Now())
 
 	var sizing *imgry.Sizing
 	if len(optSizing) > 0 { // sizing is optional
@@ -180,8 +178,7 @@ func (b *Bucket) DbFindImage(ctx context.Context, key string, optSizing ...*imgr
 
 // Persists the image blob in our data store
 func (b *Bucket) DbSaveImage(ctx context.Context, im *Image, sizing *imgry.Sizing) (err error) {
-	m := metrics.GetOrRegisterTimer("fn.bucket.DbSaveImage", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.bucket.DbSaveImage"}, time.Now())
 
 	if err := im.ValidateKey(); err != nil {
 		return err
