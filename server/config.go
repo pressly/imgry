@@ -227,7 +227,20 @@ func (cf *Config) SetupStatsD() error {
 		if err != nil {
 			return err
 		}
-		metrics.NewGlobal(metrics.DefaultConfig(cf.StatsD.ServiceName), sink)
+
+		config := &metrics.Config{
+			ServiceName:          cf.StatsD.ServiceName, // Client service name
+			HostName:             "",
+			EnableHostname:       true,             // Enable hostname prefix
+			EnableRuntimeMetrics: true,             // Enable runtime profiling
+			EnableTypePrefix:     false,            // Disable type prefix
+			TimerGranularity:     time.Millisecond, // Timers are in milliseconds
+			ProfileInterval:      time.Second * 60, // Poll runtime every minute
+		}
+
+		config.HostName, _ = os.Hostname()
+
+		metrics.NewGlobal(config, sink)
 	}
 	return nil
 }
