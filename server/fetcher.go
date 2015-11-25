@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
-	"github.com/rcrowley/go-metrics"
 	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -99,8 +99,7 @@ func (f Fetcher) Get(ctx context.Context, url string) (*FetcherResponse, error) 
 }
 
 func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse, error) {
-	m := metrics.GetOrRegisterTimer("fn.FetchRemoteData", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.FetchRemoteData"}, time.Now())
 
 	fetches := make([]*FetcherResponse, len(urls))
 

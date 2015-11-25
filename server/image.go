@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
-	"github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -58,8 +58,7 @@ func sha1Hash(in string) string {
 // or MakeSize() are called.
 
 func (im *Image) LoadImage() (err error) {
-	m := metrics.GetOrRegisterTimer("fn.image.LoadBlob", nil) // TODO: update metric name
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.image.LoadImage"}, time.Now())
 
 	// TODO: throttle the number of images we load at a given time..
 	// this should be configurable...
@@ -111,8 +110,7 @@ func (im *Image) IsValidImage() bool {
 
 // Sizes the current image in place
 func (im *Image) SizeIt(sizing *imgry.Sizing) error {
-	m := metrics.GetOrRegisterTimer("fn.image.SizeIt", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.image.SizeIt"}, time.Now())
 
 	if err := im.ValidateKey(); err != nil {
 		return err
@@ -136,8 +134,7 @@ func (im *Image) SizeIt(sizing *imgry.Sizing) error {
 
 // Create a new blob object from an existing size
 func (im *Image) MakeSize(sizing *imgry.Sizing) (*Image, error) {
-	m := metrics.GetOrRegisterTimer("fn.image.MakeSize", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.image.MakeSize"}, time.Now())
 
 	if err := im.ValidateKey(); err != nil {
 		return nil, err
@@ -185,8 +182,7 @@ func (im *Image) Release() {
 	if im == nil {
 		return
 	}
-	m := metrics.GetOrRegisterCounter("fn.image.Release", nil)
-	defer m.Inc(1)
+	defer metrics.IncrCounter([]string{"fn.image.Release"}, 1)
 
 	if im.img != nil {
 		im.img.Release()

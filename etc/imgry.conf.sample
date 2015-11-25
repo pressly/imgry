@@ -32,9 +32,7 @@ s3_bucket        = "imgry-dev"
 s3_access_key    = ""
 s3_secret_key    = ""
 
-[librato]
-enabled          = false
-email            = ""
-token            = ""
-namespace        = "imgry"
-source           = "imgry-dev"
+[statsd]
+enabled          = true
+address          = "127.0.0.1:8125"
+service_name     = "imgry"

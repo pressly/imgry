@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/armon/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chainstore/boltstore"
@@ -17,8 +18,6 @@ import (
 	"github.com/pressly/chainstore/memstore"
 	"github.com/pressly/chainstore/metricsmgr"
 	"github.com/pressly/chainstore/s3store"
-	"github.com/pressly/go-metrics/librato"
-	"github.com/rcrowley/go-metrics"
 )
 
 type Config struct {
@@ -68,14 +67,12 @@ type Config struct {
 		S3SecretKey   string `toml:"s3_secret_key"`
 	} `toml:"chainstore"`
 
-	// [librato]
-	Librato struct {
-		Enabled   bool   `toml:"enabled"`
-		Email     string `toml:"email"`
-		Token     string `toml:"token"`
-		Namespace string `toml:"namespace"`
-		Source    string `toml:"source"`
-	} `toml:"librato"`
+	// [statsd]
+	StatsD struct {
+		Enabled     bool   `toml:"enabled"`
+		Address     string `toml:"address"`
+		ServiceName string `toml:"service_name"`
+	}
 }
 
 var (
@@ -224,36 +221,26 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 	return store, nil
 }
 
-// Setup app stats & instrumentation
-func (cf *Config) SetupLibrato() (err error) {
+func (cf *Config) SetupStatsD() error {
+	if cf.StatsD.Enabled {
+		sink, err := metrics.NewStatsdSink(cf.StatsD.Address)
+		if err != nil {
+			return err
+		}
 
-	if cf.Librato.Enabled {
-		reporter := librato.NewReporter(
-			metrics.DefaultRegistry,
-			10e9,
-			cf.Librato.Email,
-			cf.Librato.Token,
-			cf.Librato.Source,
-			[]float64{0.5, 0.95},
-			time.Millisecond,
-		)
-		reporter.Namespace = cf.Librato.Namespace
-		go reporter.Run()
+		config := &metrics.Config{
+			ServiceName:          cf.StatsD.ServiceName, // Client service name
+			HostName:             "",
+			EnableHostname:       true,             // Enable hostname prefix
+			EnableRuntimeMetrics: true,             // Enable runtime profiling
+			EnableTypePrefix:     false,            // Disable type prefix
+			TimerGranularity:     time.Millisecond, // Timers are in milliseconds
+			ProfileInterval:      time.Second * 60, // Poll runtime every minute
+		}
 
-		// TODO: should we add "pulse" gauge metric to 1 ...? ...... or as a counter.....?
+		config.HostName, _ = os.Hostname()
 
-		// TODO: is there an easy way to offer sys.cpu sys.mem sys.swap stats..?
-		// for convienience..
-
-		// go metrics.Log(metrics.DefaultRegistry, 10e9, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-
-		// Capture Runtime stats periodically.
-		// NOTE: reading the MemStats will stop the world, so do this every > 1min
-		metrics.RegisterRuntimeMemStats(metrics.DefaultRegistry)
-		go metrics.CaptureRuntimeMemStats(metrics.DefaultRegistry, 60e9)
-	} else {
-		metrics.UseNilMetrics = true
+		metrics.NewGlobal(config, sink)
 	}
-
 	return nil
 }

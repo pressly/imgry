@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/garyburd/redigo/redis"
-	"github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -51,8 +51,7 @@ func (db *DB) Ping() error {
 }
 
 func (db *DB) Get(key string) (val []byte, err error) {
-	m := metrics.GetOrRegisterTimer("fn.redis.Get", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.redis.Get"}, time.Now())
 
 	conn := db.conn()
 	defer conn.Close()
@@ -68,8 +67,7 @@ func (db *DB) Get(key string) (val []byte, err error) {
 }
 
 func (db *DB) Set(key string, obj []byte, expireIn ...time.Duration) (err error) {
-	m := metrics.GetOrRegisterTimer("fn.redis.Set", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.redis.Set"}, time.Now())
 
 	conn := db.conn()
 	defer conn.Close()
@@ -109,8 +107,7 @@ func (db *DB) Exists(key string) (bool, error) {
 }
 
 func (db *DB) HGet(key string, dest interface{}) error {
-	m := metrics.GetOrRegisterTimer("fn.redis.HGet", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.redis.HGet"}, time.Now())
 
 	conn := db.conn()
 	defer conn.Close()
@@ -122,8 +119,7 @@ func (db *DB) HGet(key string, dest interface{}) error {
 }
 
 func (db *DB) HSet(key string, src interface{}) error {
-	m := metrics.GetOrRegisterTimer("fn.redis.HSet", nil)
-	defer m.UpdateSince(time.Now())
+	defer metrics.MeasureSince([]string{"fn.redis.HSet"}, time.Now())
 
 	conn := db.conn()
 	defer conn.Close()
