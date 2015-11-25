@@ -142,7 +142,7 @@ func Error(args ...interface{}) {
 func Alert(args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
+		AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
 	}
 	Logger.Error(args...)
 }
@@ -151,7 +151,7 @@ func Alert(args ...interface{}) {
 func Panic(args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
+		AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
 	}
 	Logger.Panic(args...)
 }
@@ -160,7 +160,7 @@ func Panic(args ...interface{}) {
 func Fatal(args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
+		AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprint(args...))
 	}
 	Logger.Fatal(args...)
 }
@@ -199,7 +199,7 @@ func Errorf(format string, args ...interface{}) {
 func Alertf(format string, args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
+		AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
 	}
 	Logger.Errorf(format, args...)
 }
@@ -208,7 +208,7 @@ func Alertf(format string, args ...interface{}) {
 func Panicf(format string, args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
+		AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
 	}
 	Logger.Panicf(format, args...)
 }
@@ -217,7 +217,7 @@ func Panicf(format string, args ...interface{}) {
 func Fatalf(format string, args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
+		AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintf(format, args...))
 	}
 	Logger.Fatalf(format, args...)
 }
@@ -256,7 +256,7 @@ func Errorln(args ...interface{}) {
 func Alertln(args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
+		AlertFn(ErrorLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
 	}
 	Logger.Errorln(args...)
 }
@@ -265,7 +265,7 @@ func Alertln(args ...interface{}) {
 func Panicln(args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
+		AlertFn(PanicLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
 	}
 	Logger.Panicln(args...)
 }
@@ -274,7 +274,7 @@ func Panicln(args ...interface{}) {
 func Fatalln(args ...interface{}) {
 	if AlertFn != nil {
 		_, file, line, _ := runtime.Caller(1)
-		go AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
+		AlertFn(FatalLevel, fmt.Sprintf("%s:%d ", file, line)+fmt.Sprintln(args...))
 	}
 	Logger.Fatalln(args...)
 }
