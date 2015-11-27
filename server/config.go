@@ -16,6 +16,7 @@ import (
 	"github.com/pressly/chainstore/boltstore"
 	"github.com/pressly/chainstore/lrumgr"
 	"github.com/pressly/chainstore/memstore"
+	"github.com/pressly/chainstore/metricsmgr"
 	"github.com/pressly/chainstore/s3store"
 )
 
@@ -191,27 +192,22 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 	// the bolt data..
 
 	// Build the stores and setup the chain
-	// memStore := metricsmgr.New("fn.store.mem", nil,
-	// 	memstore.New(cf.Chainstore.MemCacheSize*1024*1024),
-	// )
-	memStore := memstore.New(cf.Chainstore.MemCacheSize * 1024 * 1024)
+	memStore := metricsmgr.New("fn.store.mem",
+		memstore.New(cf.Chainstore.MemCacheSize*1024*1024),
+	)
 
-	// diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
-	// 	metricsmgr.New("fn.store.bolt", nil,
-	// 		boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
-	// 	),
-	// )
 	diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
-		boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
+		metricsmgr.New("fn.store.bolt",
+			boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
+		),
 	)
 
 	var store chainstore.Store
 
 	if cf.Chainstore.S3AccessKey != "" && cf.Chainstore.S3SecretKey != "" {
-		// s3Store := metricsmgr.New("fn.store.s3", nil,
-		// 	s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
-		// )
-		s3Store := s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey)
+		s3Store := metricsmgr.New("fn.store.s3",
+			s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
+		)
 
 		// store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
 		store = chainstore.New(memStore, chainstore.Async(s3Store))
