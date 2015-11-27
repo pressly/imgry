@@ -1,46 +1,46 @@
 package chainstore
 
 import (
-	"errors"
-	"io/ioutil"
 	"regexp"
+
+	"golang.org/x/net/context"
 )
 
 var (
-	ErrInvalidKey = errors.New("Invalid key")
-
-	KeyInvalidator = regexp.MustCompile(`(i?)[^a-z0-9\/_\-:\.]`)
+	keyInvalidator = regexp.MustCompile(`(i?)[^a-z0-9\/_\-:\.]`)
 )
 
 const (
-	MaxKeyLen = 256
+	maxKeyLen = 256
 )
 
+// Store represents a store than can be used as a chainstore link.
 type Store interface {
 	Open() error
 	Close() error
-	Put(key string, val []byte) error
-	Get(key string) ([]byte, error)
-	Del(key string) error
+	Put(ctx context.Context, key string, val []byte) error
+	Get(ctx context.Context, key string) ([]byte, error)
+	Del(ctx context.Context, key string) error
 }
 
-// TODO: how can we check if a store has been opened...?
-
+// Chain represents a store chain.
 type Chain struct {
-	stores []Store
-	async  bool
+	stores      []Store
+	async       bool
+	errCallback func(error)
 }
 
+// New creates a new store chain backed by the passed stores.
 func New(stores ...Store) Store {
-	return &Chain{stores, false}
-	// TODO: make the chain..
-	// call Open(), but in case of error..?
+	return &Chain{stores, false, nil}
 }
 
-func Async(stores ...Store) Store {
-	return &Chain{stores, true}
+// Async creates and async store.
+func Async(errCallback func(error), stores ...Store) Store {
+	return &Chain{stores, true, errCallback}
 }
 
+// Open all the stores.
 func (c *Chain) Open() (err error) {
 	for _, s := range c.stores {
 		err = s.Open()
@@ -51,27 +51,34 @@ func (c *Chain) Open() (err error) {
 	return
 }
 
-func (c *Chain) Close() (err error) {
+// Close closes all the stores.
+func (c *Chain) Close() error {
+	errs := fewerrors{}
 	for _, s := range c.stores {
-		err = s.Close()
-		// TODO: we shouldn't stop on first error.. should keep trying to close
-		// and record errors separately
+		err := s.Close()
 		if err != nil {
-			return
+			errs = append(errs, err)
 		}
 	}
-	return
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
 }
 
-func (c *Chain) Put(key string, val []byte) (err error) {
+// Put propagates a key-value pair to all stores.
+func (c *Chain) Put(ctx context.Context, key string, val []byte) (err error) {
 	if !IsValidKey(key) {
 		return ErrInvalidKey
 	}
 
 	fn := func() (err error) {
 		for _, s := range c.stores {
-			err = s.Put(key, val)
+			err = s.Put(ctx, key, val)
 			if err != nil {
+				if c.errCallback != nil {
+					c.errCallback(err)
+				}
 				return
 			}
 		}
@@ -85,14 +92,20 @@ func (c *Chain) Put(key string, val []byte) (err error) {
 	return
 }
 
-func (c *Chain) Get(key string) (val []byte, err error) {
+// Get returns the value identified by the given key. This is a sequential
+// scan. When a value is found it gets propagated to all the stores that do not
+// have it.
+func (c *Chain) Get(ctx context.Context, key string) (val []byte, err error) {
 	if !IsValidKey(key) {
 		return nil, ErrInvalidKey
 	}
 
 	for i, s := range c.stores {
-		val, err = s.Get(key)
+		val, err = s.Get(ctx, key)
 		if err != nil {
+			if c.errCallback != nil {
+				c.errCallback(err)
+			}
 			return
 		}
 
@@ -101,10 +114,12 @@ func (c *Chain) Get(key string) (val []byte, err error) {
 				// put the value in all other stores up the chain
 				fn := func() {
 					for n := i - 1; n >= 0; n-- {
-						c.stores[n].Put(key, val) // errors..?
+						err := c.stores[n].Put(ctx, key, val)
+						if c.errCallback != nil {
+							c.errCallback(err)
+						}
 					}
 				}
-				// if c.async { } else { } ....?
 				go fn()
 			}
 
@@ -115,15 +130,19 @@ func (c *Chain) Get(key string) (val []byte, err error) {
 	return
 }
 
-func (c *Chain) Del(key string) (err error) {
+// Del removes a key from all stores.
+func (c *Chain) Del(ctx context.Context, key string) (err error) {
 	if !IsValidKey(key) {
 		return ErrInvalidKey
 	}
 
 	fn := func() (err error) {
 		for _, s := range c.stores {
-			err = s.Del(key)
+			err = s.Del(ctx, key)
 			if err != nil {
+				if c.errCallback != nil {
+					c.errCallback(err)
+				}
 				return
 			}
 		}
@@ -138,10 +157,5 @@ func (c *Chain) Del(key string) (err error) {
 }
 
 func IsValidKey(key string) bool {
-	return len(key) <= MaxKeyLen && !KeyInvalidator.MatchString(key)
-}
-
-func TempDir() string {
-	path, _ := ioutil.TempDir("", "chainstore-")
-	return path
+	return len(key) <= maxKeyLen && !keyInvalidator.MatchString(key)
 }

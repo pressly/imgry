@@ -13,8 +13,8 @@ github.com/goware/urlx 6292537e62efc11517f237ed166bd105c6b44aa8
 github.com/mitchellh/goamz caaaea8b30ee15616494ee68abd5d8ebbbef05cf
 github.com/opennota/urlesc 5fa9ff0392746aeae1c4b37fcc42c65afa7a9587
 github.com/pmezard/go-difflib d8ed2627bdf02c080bf22230dbb337003b7aba2d
-github.com/pressly/chainstore 907f0f81699a835e86a81f11a3d3cd4d7215c360
-github.com/pressly/chi 9c95d30f0c46f408acf781e52ecf6a15c2323a15
+github.com/pressly/chainstore 60cb0e3ae080e00f21b6d07de5d6fd4bef4de3f6
+github.com/pressly/chi e4be4aeb501c28fc081283ddb061283029fed44b
 github.com/pressly/consistentrd 43f3d1020fc03cf1271313ec9b95c8a967c0b878
 github.com/rs/cors eb527c8097e0f19a3ff7b253a3fe70545070f420
 github.com/stretchr/testify d797d25e0fa6d53be3b1a216d24e868d6a1912ef

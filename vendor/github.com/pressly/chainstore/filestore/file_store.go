@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/pressly/chainstore"
+	"golang.org/x/net/context"
 )
 
 type fileStore struct {
@@ -15,7 +16,8 @@ type fileStore struct {
 	perm      os.FileMode // Default: 0755
 }
 
-func New(storePath string, perm os.FileMode) *fileStore {
+// New returns a file based store.
+func New(storePath string, perm os.FileMode) chainstore.Store {
 	if perm == 0 {
 		perm = 0755
 	}
@@ -50,38 +52,55 @@ func (s *fileStore) Open() (err error) {
 	return
 }
 
-func (s *fileStore) Close() (err error) { return }
+func (s *fileStore) Close() error {
+	return nil
+}
 
-func (s *fileStore) Put(key string, val []byte) (err error) {
-	if strings.Index(key, "/") > 0 { // folder key
-		err = os.MkdirAll(filepath.Dir(filepath.Join(s.storePath, key)), s.perm)
-		if err != nil {
-			return
+func (s *fileStore) Put(ctx context.Context, key string, val []byte) (err error) {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		if strings.Index(key, "/") > 0 { // folder key
+			err = os.MkdirAll(filepath.Dir(filepath.Join(s.storePath, key)), s.perm)
+			if err != nil {
+				return
+			}
 		}
-	}
 
-	err = ioutil.WriteFile(filepath.Join(s.storePath, key), val, s.perm)
-	return
+		err = ioutil.WriteFile(filepath.Join(s.storePath, key), val, s.perm)
+		return
+	}
 }
 
-func (s *fileStore) Get(key string) (val []byte, err error) {
-	fp := filepath.Join(s.storePath, key)
+func (s *fileStore) Get(ctx context.Context, key string) (val []byte, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		fp := filepath.Join(s.storePath, key)
 
-	// If the object isn't found, that isn't an error.. just return an empty
-	// object.. an error is when we can't talk to the data store
-	if _, err = os.Stat(fp); os.IsNotExist(err) {
-		return val, nil
+		// If the object isn't found, that isn't an error.. just return an empty
+		// object.. an error is when we can't talk to the data store
+		if _, err = os.Stat(fp); os.IsNotExist(err) {
+			return val, nil
+		}
+
+		val, err = ioutil.ReadFile(fp)
+		return
 	}
-
-	val, err = ioutil.ReadFile(fp)
-	return
 }
 
-func (s *fileStore) Del(key string) (err error) {
-	if string(key[0]) == "/" {
-		return chainstore.ErrInvalidKey
+func (s *fileStore) Del(ctx context.Context, key string) (err error) {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		if string(key[0]) == "/" {
+			return chainstore.ErrInvalidKey
+		}
+		fp := filepath.Join(s.storePath, key)
+		err = os.Remove(fp)
+		return
 	}
-	fp := filepath.Join(s.storePath, key)
-	err = os.Remove(fp)
-	return
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/pressly/chainstore/boltstore"
 	"github.com/pressly/chainstore/lrumgr"
 	"github.com/pressly/chainstore/memstore"
+	"github.com/pressly/chainstore/metricsmgr"
 	"github.com/pressly/chainstore/s3store"
 )
 
@@ -185,38 +186,28 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 		return nil, err
 	}
 
-	// TODO: impl another kind of lrumgr (or option) to be based on number of keys, not filesize
-	// at which point, we can add a method called .Keys() that will return the keys
-	// matching some query from a Store, and we can seed the LRU this way, and keep
-	// the bolt data..
-
 	// Build the stores and setup the chain
-	// memStore := metricsmgr.New("fn.store.mem", nil,
-	// 	memstore.New(cf.Chainstore.MemCacheSize*1024*1024),
-	// )
-	memStore := memstore.New(cf.Chainstore.MemCacheSize * 1024 * 1024)
+	memStore := metricsmgr.New("fn.store.mem",
+		memstore.New(cf.Chainstore.MemCacheSize*1024*1024),
+	)
 
-	// diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
-	// 	metricsmgr.New("fn.store.bolt", nil,
-	// 		boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
-	// 	),
-	// )
 	diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
-		boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
+		metricsmgr.New("fn.store.bolt",
+			boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
+		),
 	)
 
 	var store chainstore.Store
 
 	if cf.Chainstore.S3AccessKey != "" && cf.Chainstore.S3SecretKey != "" {
-		// s3Store := metricsmgr.New("fn.store.s3", nil,
-		// 	s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
-		// )
-		s3Store := s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey)
+		s3Store := metricsmgr.New("fn.store.s3",
+			s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
+		)
 
 		// store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
-		store = chainstore.New(memStore, chainstore.Async(s3Store))
+		store = chainstore.New(memStore, chainstore.Async(nil, s3Store))
 	} else {
-		store = chainstore.New(memStore, chainstore.Async(diskStore))
+		store = chainstore.New(memStore, chainstore.Async(nil, diskStore))
 	}
 
 	if err := store.Open(); err != nil {
