@@ -226,6 +226,11 @@ func (i *Image) SizeIt(sz *imgry.Sizing) error {
 		}
 	}
 
+	// progressive jpegs
+	i.mw.SetInterlaceScheme(imagick.INTERLACE_PLANE)
+	// exif and color profiles begone
+	i.mw.StripImage()
+	// compress it!
 	if sz.Quality > 0 {
 		if err := i.mw.SetImageCompressionQuality(uint(sz.Quality)); err != nil {
 			return err
