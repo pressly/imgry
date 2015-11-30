@@ -40,7 +40,7 @@ func NewSizing() *Sizing {
 	sz.CropBox = &FloatingRect{&FloatPoint{}, &FloatPoint{}}
 	sz.FocalPoint = &FloatPoint{}
 	sz.Granularity = DefaultSizingGranularity
-	sz.Quality = 0
+	sz.Quality = 75
 	sz.Flatten = false
 	return sz
 }
@@ -278,7 +278,7 @@ func (sz *Sizing) SetFromQuery(q string) error {
 	sz.Op = query.Get("op")
 
 	// Quality
-	sz.Quality = 0
+	sz.Quality = 75
 	if query.Get("hq") == "" {
 		if query.Get("q") != "" {
 			sz.Quality, err = strconv.Atoi(query.Get("q"))
