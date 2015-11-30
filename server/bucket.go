@@ -111,6 +111,23 @@ func (b *Bucket) AddImage(ctx context.Context, i *Image) (err error) {
 func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Sizing) (*Image, error) {
 	defer metrics.MeasureSince([]string{"fn.bucket.GetImageSize"}, time.Now())
 
+	if sizing != nil {
+		// copy sizing
+		s := *sizing
+		s.CalcResizeRect(&imgry.Rect{s.Size.Width, s.Size.Height})
+		s.Size.Width = s.GranularizedWidth()
+		s.Size.Height = s.GranularizedHeight()
+
+		// try to fetch sized image from db
+		im, err := b.DbFindImage(ctx, key, &s)
+		if err != nil && err != ErrImageNotFound {
+			return nil, err
+		}
+		if im != nil { // Got it!
+			return im, nil
+		}
+	}
+
 	// Find the original image
 	origIm, err := b.DbFindImage(ctx, key, nil)
 	if err != nil {
