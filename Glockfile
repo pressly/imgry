@@ -1,11 +1,11 @@
 github.com/BurntSushi/toml 056c9bc7be7190eaa7715723883caffa5f8fa3e4
 github.com/PuerkitoBio/purell d69616f51cdfcd7514d6a380847a152dfc2a749d
 github.com/Sirupsen/logrus cdaedc68f2894175ac2b3221869685602c759e71
-github.com/armon/go-metrics 6c5fa0d8f48f4661c9ba8709799c88d425ad20f0
 github.com/boltdb/bolt d359c78f40cc01fa12b65c3d30210dc9c529dd87
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
 github.com/garyburd/redigo 7ec56c98db25aa5eeed5e028188fda8fe6fb4bf3
 github.com/gographics/imagick 5f86f7c1a891b68082ed852ade096f3f878557db
+github.com/goware/go-metrics a16cd909d2f19b6b5993df17679d67213adbec53
 github.com/goware/heartbeat 602f8b16cd86f4f3f64efbcc3e11d6ac6db763e3
 github.com/goware/httpcoala bb21916a3e9c5e04ed0615ba66e120302d2e552b
 github.com/goware/lg a25069fb531db6a42f4ead402020d84bcf024f6c
@@ -13,7 +13,7 @@ github.com/goware/urlx 6292537e62efc11517f237ed166bd105c6b44aa8
 github.com/mitchellh/goamz caaaea8b30ee15616494ee68abd5d8ebbbef05cf
 github.com/opennota/urlesc 5fa9ff0392746aeae1c4b37fcc42c65afa7a9587
 github.com/pmezard/go-difflib d8ed2627bdf02c080bf22230dbb337003b7aba2d
-github.com/pressly/chainstore 60cb0e3ae080e00f21b6d07de5d6fd4bef4de3f6
+github.com/pressly/chainstore 8aa61ee8242fd31d3ad324e92f4594c4b212457c
 github.com/pressly/chi e4be4aeb501c28fc081283ddb061283029fed44b
 github.com/pressly/consistentrd 43f3d1020fc03cf1271313ec9b95c8a967c0b878
 github.com/rs/cors eb527c8097e0f19a3ff7b253a3fe70545070f420

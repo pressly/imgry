@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	"github.com/goware/go-metrics"
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
 	"golang.org/x/net/context"
