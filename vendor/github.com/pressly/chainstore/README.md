@@ -83,7 +83,7 @@ func main() {
 
 	// Since we've used the metricsManager above (metricsmgr), any calls to the boltstore
 	// and s3store will be measured. Next is to send metrics to librato, graphite, influxdb,
-	// whatever.. via github.com/rcrowley/go-metrics
+	// whatever.. via github.com/goware/go-metrics
 	// go librato.Librato(metrics.DefaultRegistry, 10e9, ...)
 
 	//--
