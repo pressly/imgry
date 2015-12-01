@@ -7,7 +7,7 @@ import (
 	"net/http/pprof"
 	"time"
 
-	"github.com/armon/go-metrics"
+	"github.com/goware/go-metrics"
 	"github.com/pressly/chi"
 	"github.com/tobi/airbrake-go"
 	"golang.org/x/net/context"

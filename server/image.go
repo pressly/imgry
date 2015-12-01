@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	"github.com/goware/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"

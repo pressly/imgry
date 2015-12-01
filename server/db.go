@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/garyburd/redigo/redis"
+	"github.com/goware/go-metrics"
 )
 
 var (
