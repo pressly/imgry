@@ -110,12 +110,9 @@ CONNECT:
 
 			// Check if this would overflow the packet size
 			if len(metric)+buf.Len() > statsdMaxLen {
-				_, err := sock.Write(buf.Bytes())
+				// Ignoring write errors. See message below.
+				sock.Write(buf.Bytes())
 				buf.Reset()
-				if err != nil {
-					log.Printf("[ERR] Error writing to statsd! Err: %s", err)
-					goto WAIT
-				}
 			}
 
 			// Append to the buffer
