@@ -227,7 +227,9 @@ func (i *Image) SizeIt(sz *imgry.Sizing) error {
 	}
 
 	// progressive jpegs
-	i.mw.SetInterlaceScheme(imagick.INTERLACE_PLANE)
+	if i.Format() == "jpg" {
+		i.mw.SetInterlaceScheme(imagick.INTERLACE_PLANE)
+	}
 	// exif and color profiles begone
 	i.mw.StripImage()
 	// compress it!
