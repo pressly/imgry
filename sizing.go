@@ -92,7 +92,9 @@ func (sz *Sizing) CalcResizeRect(srcSize *Rect) (resizedRect *Rect, cropRect *Re
 	// Catch cropPoints that don't exist within the bounds of the image
 	if cropOrigin != nil {
 		negativePoint := cropOrigin.X < 0 || cropOrigin.Y < 0
-		oversizedPoint := cropOrigin.X > sz.Size.Width || cropOrigin.Y > sz.Size.Height
+		// check against the resized image from where we are actually going to
+		// crop.
+		oversizedPoint := cropOrigin.X > resizedRect.Width || cropOrigin.Y > resizedRect.Height
 		if negativePoint || oversizedPoint {
 			cropOrigin = &image.Point{}
 		}

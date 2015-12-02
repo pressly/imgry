@@ -5,3 +5,4 @@ etc/imgry.conf
 *.sw?
 testdata/issue-8.*
 testdata/issue-10-*
+testdata/issue-25-*

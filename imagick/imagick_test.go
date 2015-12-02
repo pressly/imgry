@@ -433,3 +433,29 @@ func TestIssue10OpFittedTestForLeaks(t *testing.T) {
 	}
 
 }
+
+func TestIssue25(t *testing.T) {
+	var img imgry.Image
+	var err error
+	ng := Engine{}
+
+	img, err = ng.LoadFile("../testdata/issue-25.jpg")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1600, img.Width())
+	assert.Equal(t, 480, img.Height())
+
+	assert.NoError(t, err)
+
+	sz, _ := imgry.NewSizingFromQuery("format=jpeg&size=750x922&op=cover")
+	err = img.SizeIt(sz)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 750, img.Width())
+	assert.Equal(t, 920, img.Height())
+
+	err = img.WriteToFile("../testdata/issue-25-out.jpg")
+	assert.NoError(t, err)
+
+	img.Release()
+}
