@@ -101,7 +101,7 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
-	r.Use(httpcoala.Route("HEAD", "GET"))
+	r.Use(httpcoala.Route("HEAD"))
 
 	r.Use(heartbeat.Route("/ping"))
 	r.Use(heartbeat.Route("/favicon.ico"))
