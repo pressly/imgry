@@ -14,7 +14,7 @@ ADD http://downloads.sourceforge.net/project/libpng/libpng16/1.6.19/libpng-1.6.1
 RUN cd /tmp && tar -zxvf libpng-1.6.19.tar.gz && cd libpng-1.6.19 && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
-ADD http://www.imagemagick.org/download/ImageMagick-6.9.2-8.tar.gz /tmp/
+ADD http://www.imagemagick.org/download/ImageMagick-6.9.2-8.tar.xz /tmp/
 RUN cd /tmp && tar -xvf ImageMagick-6.9.2-8.tar.xz && cd ImageMagick-6.9.2-8 && \
     ./configure --prefix=/usr \
                 --enable-shared \
