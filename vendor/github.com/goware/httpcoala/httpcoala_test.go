@@ -1,11 +1,6 @@
 package httpcoala
 
 import (
-	"crypto/rand"
-	"errors"
-	"fmt"
-	"github.com/pressly/chi"
-	"github.com/pressly/chi/middleware"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,7 +8,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 func TestHandler(t *testing.T) {
@@ -110,53 +104,4 @@ func TestHandler(t *testing.T) {
 		t.Error("queue count was expected to be empty, but count:", finalCount)
 	}
 	log.Println("final count:", finalCount)
-}
-
-func TestStress(t *testing.T) {
-
-	mockData := make([]byte, 1024*1024*20)
-	rand.Read(mockData)
-
-	r := chi.NewRouter()
-
-	r.Use(middleware.Logger)
-	r.Use(Route("HEAD", "GET")) // or, Route("*")
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(time.Second * 2) // expensive op
-		w.WriteHeader(200)
-		w.Write(mockData)
-	})
-
-	go http.ListenAndServe(":1111", r)
-
-	time.Sleep(time.Second * 1)
-
-	test := func(i int) error {
-		res, err := http.Get(fmt.Sprintf("http://127.0.0.1:1111/?_=%d", i))
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-
-		if res.StatusCode != 200 {
-			return errors.New("Expecting 200 OK.")
-		}
-
-		return err
-	}
-
-	var wg sync.WaitGroup
-
-	for i := 0; i < 500; i++ {
-		wg.Add(1)
-		go func(i int) {
-			if err := test(i); err != nil {
-				t.Fatal("test: ", err)
-			}
-			wg.Done()
-		}(i)
-	}
-
-	wg.Wait()
 }
