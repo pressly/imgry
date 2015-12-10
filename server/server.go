@@ -99,7 +99,7 @@ func (srv *Server) NewRouter() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Use(middleware.ThrottleBacklog(DefaultConfig.Limits.ThrottlerLimit, DefaultConfig.Limits.ThrottlerBacklog, DefaultConfig.Limits.ThrottlerBacklogTimeout))
+	r.Use(middleware.ThrottleBacklog(cf.Limits.MaxRequests, cf.Limits.BacklogSize, cf.Limits.BacklogTimeout))
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
