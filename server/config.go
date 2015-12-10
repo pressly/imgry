@@ -45,6 +45,11 @@ type Config struct {
 
 		RequestTimeoutStr string `toml:"request_timeout"`
 		BacklogTimeoutStr string `toml:"backlog_timeout"`
+
+		ThrottlerLimit             int `toml:"throttler_limit"`
+		ThrottlerBacklog           int `toml:"throttler_backlog"`
+		ThrottlerBacklogTimeout    time.Duration
+		ThrottlerBacklogTimeoutStr string `toml:"throttler_backlog_timeout"`
 	} `toml:"limits"`
 
 	// [db]
@@ -98,6 +103,10 @@ func init() {
 	cf.Limits.MaxFetchers = 100
 	cf.Limits.MaxImageSizers = 20
 
+	cf.Limits.ThrottlerLimit = 80                        // Available RAM / Avg RAM a job requires. (e.g.: 4096 / 50 = 81)
+	cf.Limits.ThrottlerBacklog = 500                     // (Maximum waiting time for a job / Avg time a job requires) * Throttle limit. (e.g.: (30/5)*80 = 480)
+	cf.Limits.ThrottlerBacklogTimeout = 30 * time.Second // Maximum waiting time for a job. (e.g.: 30s)
+
 	DefaultConfig = cf
 }
 
@@ -150,6 +159,13 @@ func (cf *Config) Apply() (err error) {
 			return err
 		}
 		cf.Limits.BacklogTimeout = to
+	}
+	if cf.Limits.ThrottlerBacklogTimeoutStr != "" {
+		to, err := time.ParseDuration(cf.Limits.ThrottlerBacklogTimeoutStr)
+		if err != nil {
+			return err
+		}
+		cf.Limits.ThrottlerBacklogTimeout = to
 	}
 
 	return nil

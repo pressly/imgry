@@ -11,12 +11,15 @@ nodes            = [ "http://127.0.0.1:4446" ]
 # nodes            = [ "http://127.0.0.1:4446", "http://127.0.0.1:4447", "http://127.0.0.1:4448" ]
 
 [limits]
-max_requests     = 1000      # request throughput (/sec)
-backlog_size     = 5000      # backlog capacity
-request_timeout  = "40s"     # global request timeout
-backlog_timeout  = "1500ms"  # backlog wait period
-max_fetchers     = 100       # num of parallel http fetchers
-max_image_sizers = 20        # num of parallel image sizers
+max_requests              = 1000      # request throughput (/sec)
+backlog_size              = 5000      # backlog capacity
+request_timeout           = "40s"     # global request timeout
+backlog_timeout           = "1500ms"  # backlog wait period
+max_fetchers              = 100       # num of parallel http fetchers
+max_image_sizers          = 20        # num of parallel image sizers
+throttler_limit           = 80			  # maximum number of concurrent image jobs.
+throttler_backlog         = 500       # how many pending jobs to queue after reaching throttler_limit.
+throttler_backlog_timeout = "30s"     # throttler backlog wait period.
 
 [db]
 redis_uri        = "0.0.0.0:6379"

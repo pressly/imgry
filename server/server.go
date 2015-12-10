@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/goware/heartbeat"
 	"github.com/goware/httpcoala"
@@ -99,7 +98,8 @@ func (srv *Server) NewRouter() http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Throttle(50, 200, time.Second*20))
+
+	r.Use(middleware.ThrottleBacklog(DefaultConfig.Limits.ThrottlerLimit, DefaultConfig.Limits.ThrottlerBacklog, DefaultConfig.Limits.ThrottlerBacklogTimeout))
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
