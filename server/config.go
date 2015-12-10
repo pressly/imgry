@@ -103,9 +103,9 @@ func init() {
 	cf.Limits.MaxFetchers = 100
 	cf.Limits.MaxImageSizers = 20
 
-	cf.Limits.ThrottlerLimit = 80                        // Available RAM / Avg RAM a job requires. (e.g.: 4096 / 50 = 81)
-	cf.Limits.ThrottlerBacklog = 500                     // (Maximum waiting time for a job / Avg time a job requires) * Throttle limit. (e.g.: (30/5)*80 = 480)
-	cf.Limits.ThrottlerBacklogTimeout = 30 * time.Second // Maximum waiting time for a job. (e.g.: 30s)
+	cf.Limits.ThrottlerLimit = 80                        // Available RAM / Avg RAM a single job requires. (e.g.: 4096 / 50 = 81)
+	cf.Limits.ThrottlerBacklog = 500                     // (Maximum waiting time for a single job / Avg time a single job requires) * Throttle limit. (e.g.: (30/5)*80 = 480)
+	cf.Limits.ThrottlerBacklogTimeout = 30 * time.Second // Maximum waiting time for a single job. (e.g.: 30s)
 
 	DefaultConfig = cf
 }
