@@ -459,3 +459,27 @@ func TestIssue25(t *testing.T) {
 
 	img.Release()
 }
+
+func TestGIFToVideo(t *testing.T) {
+	var sz *imgry.Sizing
+	var img imgry.Image
+	var err error
+
+	ng := Engine{}
+
+	// Resizing to 750, which is slightly smaller.
+	img, err = ng.LoadFile("../testdata/issue-8.gif")
+	assert.NoError(t, err)
+
+	sz, _ = imgry.NewSizingFromQuery("format=mp4&size=750x")
+	err = img.SizeIt(sz)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 750, img.Width())
+	assert.Equal(t, 422, img.Height())
+
+	err = img.WriteToFile("../testdata/issue-8.700.mp4")
+	assert.NoError(t, err)
+
+	img.Release()
+}

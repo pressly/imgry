@@ -10,6 +10,7 @@ import (
 
 	"github.com/gographics/imagick/imagick"
 	"github.com/pressly/imgry"
+	"github.com/pressly/imgry/ffmpeg"
 )
 
 var (
@@ -153,10 +154,11 @@ func (ng Engine) GetImageInfo(b []byte, srcFormat ...string) (*imgry.ImageInfo, 
 type Image struct {
 	mw *imagick.MagickWand
 
-	data   []byte
-	width  int
-	height int
-	format string
+	data          []byte
+	width         int
+	height        int
+	format        string
+	convertFormat string
 }
 
 func (i *Image) Data() []byte {
@@ -171,7 +173,17 @@ func (i *Image) Height() int {
 	return i.height
 }
 
+func (i *Image) guessFormat() {
+	i.format = strings.ToLower(i.mw.GetImageFormat())
+	if i.format == "jpeg" {
+		i.format = "jpg"
+	}
+}
+
 func (i *Image) Format() string {
+	if i.format == "" {
+		i.guessFormat()
+	}
 	return i.format
 }
 
@@ -220,16 +232,27 @@ func (i *Image) SizeIt(sz *imgry.Sizing) error {
 		return err
 	}
 
-	if sz.Format != "" {
-		if err := i.mw.SetFormat(sz.Format); err != nil {
+	i.convertFormat = strings.ToLower(sz.Format)
+
+	switch i.convertFormat {
+	case "jpeg", "jpg", "gif", "png":
+		// allow whitelisted format.
+		if err := i.mw.SetFormat(i.convertFormat); err != nil {
 			return err
 		}
+		// image has been converted at this point.
+		i.guessFormat()
+	case "mp4":
+		// won't be converted right now.
+	default:
+		// ignore unknown destination format.
 	}
 
 	// progressive jpegs
 	if i.Format() == "jpg" {
 		i.mw.SetInterlaceScheme(imagick.INTERLACE_PLANE)
 	}
+
 	// exif and color profiles begone
 	i.mw.StripImage()
 	// compress it!
@@ -345,6 +368,17 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 }
 
 func (i *Image) WriteToFile(fn string) error {
+	if i.convertFormat != i.format {
+		if i.convertFormat == "mp4" {
+			tmpout := fn + "." + i.format
+			err := ioutil.WriteFile(tmpout, i.Data(), 0664)
+			if err != nil {
+				return err
+			}
+			defer os.Remove(tmpout)
+			return ffmpeg.Convert(tmpout, fn)
+		}
+	}
 	err := ioutil.WriteFile(fn, i.Data(), 0664)
 	return err
 }
@@ -368,10 +402,7 @@ func (i *Image) sync(optFlatten ...bool) error {
 	i.width = int(i.mw.GetImageWidth())
 	i.height = int(i.mw.GetImageHeight())
 
-	i.format = strings.ToLower(i.mw.GetImageFormat())
-	if i.format == "jpeg" {
-		i.format = "jpg"
-	}
+	i.guessFormat()
 
 	return nil
 }
