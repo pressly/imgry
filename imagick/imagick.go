@@ -154,11 +154,11 @@ func (ng Engine) GetImageInfo(b []byte, srcFormat ...string) (*imgry.ImageInfo, 
 type Image struct {
 	mw *imagick.MagickWand
 
-	data          []byte
-	width         int
-	height        int
-	format        string
-	convertFormat string
+	data       []byte
+	width      int
+	height     int
+	format     string
+	destFormat string
 }
 
 func (i *Image) Data() []byte {
@@ -232,12 +232,12 @@ func (i *Image) SizeIt(sz *imgry.Sizing) error {
 		return err
 	}
 
-	i.convertFormat = strings.ToLower(sz.Format)
+	i.destFormat = strings.ToLower(sz.Format)
 
-	switch i.convertFormat {
+	switch i.destFormat {
 	case "jpeg", "jpg", "gif", "png":
 		// allow whitelisted format.
-		if err := i.mw.SetFormat(i.convertFormat); err != nil {
+		if err := i.mw.SetFormat(i.destFormat); err != nil {
 			return err
 		}
 		// image has been converted at this point.
@@ -368,8 +368,8 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 }
 
 func (i *Image) WriteToFile(fn string) error {
-	if i.convertFormat != i.format {
-		if i.convertFormat == "mp4" {
+	if i.destFormat != i.format {
+		if i.destFormat == "mp4" {
 			tmpout := fn + "." + i.format
 			err := ioutil.WriteFile(tmpout, i.Data(), 0664)
 			if err != nil {
