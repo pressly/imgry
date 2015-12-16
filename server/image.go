@@ -5,12 +5,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/goware/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
+	"github.com/pressly/imgry/ffmpeg"
 	"github.com/pressly/imgry/imagick"
 )
 
@@ -33,7 +37,8 @@ type Image struct {
 	Sizing      *imgry.Sizing `json:"-" redis:"-"`
 	Data        []byte        `json:"-" redis:"-"`
 
-	img imgry.Image
+	img              imgry.Image
+	conversionFormat string
 }
 
 // Hrmm.. how will we generate a Uid if we just have a blob and no srcurl..?
@@ -127,7 +132,11 @@ func (im *Image) SizeIt(sizing *imgry.Sizing) error {
 		return fmt.Errorf("Error occurred when sizing an image: %s", err)
 	}
 
-	im.sync()
+	im.conversionFormat = sizing.Format
+
+	if err = im.sync(); err != nil {
+		return fmt.Errorf("Error occurred when syncing the image: %s", err)
+	}
 
 	return nil
 }
@@ -189,9 +198,55 @@ func (im *Image) Release() {
 	}
 }
 
-func (im *Image) sync() {
+func (im *Image) sync() error {
 	im.Width = im.img.Width()
 	im.Height = im.img.Height()
+
+	if im.Format == "mp4" && len(im.Data) != 0 {
+		// No need to convert again.
+		return nil
+	}
+
 	im.Format = im.img.Format()
 	im.Data = im.img.Data()
+
+	if im.conversionFormat == "mp4" && im.Format == "gif" {
+		// I still can't find how to pipe images to ffmpeg's stdin, so for now we
+		// need to output them to disk.
+		outputGIF := tmpFile(im.Key + ".gif") // Better if mounted on tmpfs.
+		outputMP4 := tmpFile(im.Key + ".mp4")
+
+		if err := ioutil.WriteFile(outputGIF, im.img.Data(), 0664); err != nil {
+			return err
+		}
+		defer os.RemoveAll(path.Dir(outputGIF))
+
+		if err := ffmpeg.Convert(outputGIF, outputMP4); err != nil {
+			return err
+		}
+		defer os.RemoveAll(path.Dir(outputMP4))
+
+		buf, err := ioutil.ReadFile(outputMP4)
+		if err != nil {
+			return err
+		}
+
+		// I'm going to take over the data buffer.
+		im.Data = buf
+		im.Format = "mp4"
+	}
+
+	return nil
+}
+
+func tmpFile(name string) string {
+	for {
+		dirname, _ := ioutil.TempDir("", "tmp-")
+		file := dirname + "/" + name
+		_, err := os.Stat(file)
+		if !os.IsExist(err) {
+			return file
+		}
+	}
+	panic("reached")
 }
