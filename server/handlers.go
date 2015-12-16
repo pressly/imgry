@@ -17,6 +17,7 @@ import (
 
 var (
 	MimeTypes = map[string]string{
+		"mp4":  "video/mp4",
 		"png":  "image/png",
 		"jpeg": "image/jpeg",
 		"jpg":  "image/jpeg",
