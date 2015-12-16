@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 )
 
+// Convert wraps the ffmpeg command and can be used to convert media files.
+//   ffmpeg -i src -y dst
 func Convert(src string, dst string) (err error) {
 	if src, err = filepath.Abs(src); err != nil {
 		return
