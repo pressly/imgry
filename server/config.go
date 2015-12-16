@@ -36,20 +36,19 @@ type Config struct {
 
 	// [limits]
 	Limits struct {
-		MaxRequests    int `toml:"max_requests"`
-		BacklogSize    int `toml:"backlog_size"`
-		RequestTimeout time.Duration
-		BacklogTimeout time.Duration
+		// Throttler settings
+		MaxRequests       int    `toml:"max_requests"`
+		BacklogSize       int    `toml:"backlog_size"`
+		BacklogTimeoutStr string `toml:"backlog_timeout"`
+		BacklogTimeout    time.Duration
+
+		// Global request timeout
+		RequestTimeoutStr string `toml:"request_timeout"`
+		RequestTimeout    time.Duration
+
+		// Imgry limits
 		MaxFetchers    int `toml:"max_fetchers"`
 		MaxImageSizers int `toml:"max_image_sizers"`
-
-		RequestTimeoutStr string `toml:"request_timeout"`
-		BacklogTimeoutStr string `toml:"backlog_timeout"`
-
-		ThrottlerLimit             int `toml:"throttler_limit"`
-		ThrottlerBacklog           int `toml:"throttler_backlog"`
-		ThrottlerBacklogTimeout    time.Duration
-		ThrottlerBacklogTimeoutStr string `toml:"throttler_backlog_timeout"`
 	} `toml:"limits"`
 
 	// [db]
@@ -96,16 +95,23 @@ func init() {
 		Profiler:    false,
 	}
 
-	cf.Limits.MaxRequests = 1000
-	cf.Limits.BacklogSize = 5000
-	cf.Limits.RequestTimeout = 45 * time.Second
-	cf.Limits.BacklogTimeout = 1500 * time.Millisecond
-	cf.Limits.MaxFetchers = 100
-	cf.Limits.MaxImageSizers = 20
+	// Available RAM / Avg RAM a single job requires. (e.g.: 4096 / 50 = 81)
+	cf.Limits.MaxRequests = 80
 
-	cf.Limits.ThrottlerLimit = 80                        // Available RAM / Avg RAM a single job requires. (e.g.: 4096 / 50 = 81)
-	cf.Limits.ThrottlerBacklog = 500                     // (Maximum waiting time for a single job / Avg time a single job requires) * Throttle limit. (e.g.: (30/5)*80 = 480)
-	cf.Limits.ThrottlerBacklogTimeout = 30 * time.Second // Maximum waiting time for a single job. (e.g.: 30s)
+	// (Maximum waiting time for a single job / Avg time a single job requires) * Throttle limit. (e.g.: (30/5)*80 = 480)
+	cf.Limits.BacklogSize = 500
+
+	// Maximum waiting time for a single job. (e.g.: 30s)
+	cf.Limits.BacklogTimeout = 30 * time.Second
+
+	// Max overall time to respond to the request
+	cf.Limits.RequestTimeout = 45 * time.Second
+
+	// Max parallel imgry fetchers
+	cf.Limits.MaxFetchers = 100
+
+	// Max parallel image operations
+	cf.Limits.MaxImageSizers = 20
 
 	DefaultConfig = cf
 }
@@ -159,13 +165,6 @@ func (cf *Config) Apply() (err error) {
 			return err
 		}
 		cf.Limits.BacklogTimeout = to
-	}
-	if cf.Limits.ThrottlerBacklogTimeoutStr != "" {
-		to, err := time.ParseDuration(cf.Limits.ThrottlerBacklogTimeoutStr)
-		if err != nil {
-			return err
-		}
-		cf.Limits.ThrottlerBacklogTimeout = to
 	}
 
 	return nil
