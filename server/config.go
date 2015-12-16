@@ -239,13 +239,13 @@ func (cf *Config) SetupStatsD() error {
 		}
 
 		config := &metrics.Config{
+			ServiceName:          cf.StatsD.ServiceName, // Client service name
 			HostName:             "",
-			EnableHostname:       true,             // Enable hostname prefix
+			EnableHostname:       false,            // Enable hostname prefix
 			EnableRuntimeMetrics: true,             // Enable runtime profiling
 			EnableTypePrefix:     false,            // Disable type prefix
 			TimerGranularity:     time.Millisecond, // Timers are in milliseconds
 			ProfileInterval:      time.Second * 60, // Poll runtime every minute
-			ServiceName:          "",               // Client service name, let the stats daemon manage this one
 		}
 
 		config.HostName, _ = os.Hostname()
