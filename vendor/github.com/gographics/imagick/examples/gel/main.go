@@ -63,8 +63,7 @@ func main() {
 
 	// The last argument is specified as a percentage on the command line
 	// but is specified to the function as a percentage of the QuantumRange
-	_, quant := imagick.GetQuantumRange()
-	mwf.SigmoidalContrastImage(true, 16, 0.6*float64(quant))
+	mwf.SigmoidalContrastImage(true, 16, 0.6*imagick.QUANTUM_RANGE)
 	mwf.EvaluateImage(imagick.EVAL_OP_MULTIPLY, 0.5)
 	mwf.RollImage(5, 10)
 

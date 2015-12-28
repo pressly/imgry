@@ -43,5 +43,8 @@ const (
 	FILTER_COSINE         FilterType = C.CosineFilter
 	FILTER_SPLINE         FilterType = C.SplineFilter
 	FILTER_SENTINEL       FilterType = C.SentinelFilter
-	FILTER_LANCZOS_RADIUS FilterType = C.LanczosRadiusFilter
+	/*
+		Missing in ImageMagick 6.7.7
+		FILTER_LANCZOS_RADIUS FilterType = C.LanczosRadiusFilter
+	*/
 )

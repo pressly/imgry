@@ -2,9 +2,8 @@
 package main
 
 import (
-	"os"
-
 	"github.com/gographics/imagick/imagick"
+	"os"
 )
 
 func main() {
@@ -12,8 +11,11 @@ func main() {
 	defer imagick.Terminate()
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 	pw := imagick.NewPixelWand()
+	defer pw.Destroy()
 	dw := imagick.NewDrawingWand()
+	defer dw.Destroy()
 
 	if err := mw.SetSize(170, 100); err != nil {
 		panic(err)
@@ -64,6 +66,7 @@ func main() {
 	dw = imagick.NewDrawingWand()
 
 	mwc := imagick.NewMagickWand()
+	defer mwc.Destroy()
 
 	mw.ReadImage("logo_mask.png")
 
@@ -104,6 +107,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer mwf.Destroy()
 
 	//mw.SetImageMatte(false)
 
@@ -201,7 +205,7 @@ func main() {
 
 	// It seems that this must be a separate pixelwand for Colorize to work!
 	pwo := imagick.NewPixelWand()
-
+	defer pwo.Destroy()
 	// AHA .. this is how to do a 60% colorize
 	pwo.SetColor("rgb(60%,60%,60%)")
 	mwf.ColorizeImage(pw, pwo)
@@ -220,7 +224,7 @@ func main() {
 
 	mwf = mwc.MergeImageLayers(imagick.IMAGE_LAYER_FLATTEN)
 
-	if err := mwf.DisplayImage(os.Getenv("DISPLAY")); err != nil {
+	if err := mwf.DisplayImage(os.Getenv("DYSPLAY")); err != nil {
 		panic(err)
 	}
 }

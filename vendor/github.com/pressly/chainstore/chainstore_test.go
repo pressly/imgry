@@ -2,10 +2,10 @@ package chainstore_test
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -83,7 +83,8 @@ func TestAsyncChain(t *testing.T) {
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	storeDir := tempDir()
-	bgErrors := make([]string, 0)
+
+	var errored atomic.Value
 
 	ms = memstore.New(100)
 	fs = filestore.New(storeDir+"/filestore", 0755)
@@ -95,7 +96,7 @@ func TestAsyncChain(t *testing.T) {
 		chainstore.Async(
 			func(err error) {
 				log.Println("async error:", err)
-				bgErrors = append(bgErrors, fmt.Sprintf("async error: %v", err))
+				errored.Store(true)
 			},
 			logmgr.New(logger, "async"),
 			&testStore{},
@@ -137,14 +138,13 @@ func TestAsyncChain(t *testing.T) {
 	//--
 
 	// Lets make an error in async store
-	assert.Empty(bgErrors)
+	assert.Nil(errored.Load())
 
 	err = chain.Put(ctx, "bad", []byte("v"))
 	assert.Nil(err) // no error because sync store took it fine
 
 	time.Sleep(time.Second * 1) // wait for async operation..
-	assert.NotEmpty(bgErrors)
-
+	assert.NotEmpty(errored.Load())
 }
 
 type testStore struct{}

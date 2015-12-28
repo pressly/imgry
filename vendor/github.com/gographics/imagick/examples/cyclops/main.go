@@ -2,9 +2,8 @@
 package main
 
 import (
-	"os"
-	
 	"github.com/gographics/imagick/imagick"
+	"os"
 )
 
 func main() {
@@ -12,10 +11,13 @@ func main() {
 	imagick.Initialize()
 	defer imagick.Terminate()
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 	bg := imagick.NewPixelWand()
+	defer bg.Destroy()
 	fg := imagick.NewPixelWand()
+	defer fg.Destroy()
 
-	err = mw.ReadImage("cyclops_sm.gif")
+	err = mw.ReadImage("http://www.imagemagick.org/Usage/images/cyclops_sm.gif")
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +34,7 @@ func main() {
 	mw.FloodfillPaintImage(channel, fg, 20, bg, 0, 0, false)
 	mw.ShaveImage(1, 1)
 
-	mw.DisplayImage(os.Getenv("DISPLAY"))
+	mw.DisplayImage(os.Getenv("DYSPLAY"))
 	if err != nil {
 		panic(err)
 	}

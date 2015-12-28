@@ -10,7 +10,9 @@ func main() {
 	defer imagick.Terminate()
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 	dw := imagick.NewDrawingWand()
+	defer dw.Destroy()
 	cw := imagick.NewPixelWand()
 
 	diameter := uint(640)

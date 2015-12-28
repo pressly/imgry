@@ -2,9 +2,8 @@
 package main
 
 import (
-	"math"
-
 	"github.com/gographics/imagick/imagick"
+	"math"
 )
 
 func DegreesToRadians(deg float64) (rad float64) {
@@ -98,6 +97,7 @@ func example1() {
 	result := make([]float64, 6)
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 
 	mw.ReadImage("logo:")
 
@@ -141,6 +141,7 @@ func example2() {
 	result := make([]float64, 6)
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 
 	mw.ReadImage("logo:")
 
@@ -191,6 +192,7 @@ func example3() {
 	var angle_degrees float64
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 
 	mw.ReadImage("logo:")
 	w := mw.GetImageWidth()
@@ -256,6 +258,7 @@ func example4() {
 	}
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 	mw.SetSize(gw, gh)
 	mw.ReadImage("gradient:white-black")
 

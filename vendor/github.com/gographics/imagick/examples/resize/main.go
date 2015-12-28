@@ -2,9 +2,8 @@
 package main
 
 import (
-	"os"
-
 	"github.com/gographics/imagick/imagick"
+	"os"
 )
 
 func main() {
@@ -14,6 +13,8 @@ func main() {
 	var err error
 
 	mw := imagick.NewMagickWand()
+	// Schedule cleanup
+	defer mw.Destroy()
 
 	err = mw.ReadImage("logo:")
 	if err != nil {

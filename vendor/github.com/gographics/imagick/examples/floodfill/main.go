@@ -2,9 +2,8 @@
 package main
 
 import (
-	"os"
-
 	"github.com/gographics/imagick/imagick"
+	"os"
 )
 
 func main() {
@@ -14,9 +13,12 @@ func main() {
 	var err error
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 
 	// fillcolor and bordercolor
 	fc, bc := imagick.NewPixelWand(), imagick.NewPixelWand()
+	defer fc.Destroy()
+	defer bc.Destroy()
 
 	fc.SetColor("none")
 	bc.SetColor("white")
@@ -35,7 +37,7 @@ func main() {
 	// the target color
 	mw.FloodfillPaintImage(rgba, fc, 20, bc, 0, 0, false)
 
-	mw.DisplayImage(os.Getenv("DISPLAY"))
+	mw.DisplayImage(os.Getenv("DYSPLAY"))
 	if err != nil {
 		panic(err)
 	}

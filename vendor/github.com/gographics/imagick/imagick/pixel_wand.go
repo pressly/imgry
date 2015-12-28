@@ -10,29 +10,16 @@ package imagick
 import "C"
 
 import (
-	"runtime"
-	"sync"
-	"sync/atomic"
 	"unsafe"
 )
 
 type PixelWand struct {
 	pw *C.PixelWand
-	sync.Once
-}
-
-// Returns a new pixel wand
-func newPixelWand(cpw *C.PixelWand) *PixelWand {
-	pw := &PixelWand{pw: cpw}
-	runtime.SetFinalizer(pw, Destroy)
-	pw.IncreaseCount()
-
-	return pw
 }
 
 // Returns a new pixel wand
 func NewPixelWand() *PixelWand {
-	return newPixelWand(C.NewPixelWand())
+	return &PixelWand{C.NewPixelWand()}
 }
 
 // Clears resources associated with the wand
@@ -42,7 +29,7 @@ func (pw *PixelWand) Clear() {
 
 // Makes an exact copy of the wand
 func (pw *PixelWand) Clone() *PixelWand {
-	return newPixelWand(C.ClonePixelWand(pw.pw))
+	return &PixelWand{C.ClonePixelWand(pw.pw)}
 }
 
 // Deallocates resources associated with a pixel wand
@@ -50,14 +37,9 @@ func (pw *PixelWand) Destroy() {
 	if pw.pw == nil {
 		return
 	}
-
-	pw.Do(func() {
-		pw.pw = C.DestroyPixelWand(pw.pw)
-		relinquishMemory(unsafe.Pointer(pw.pw))
-		pw.pw = nil
-
-		pw.DecreaseCount()
-	})
+	pw.pw = C.DestroyPixelWand(pw.pw)
+	C.free(unsafe.Pointer(pw.pw))
+	pw.pw = nil
 }
 
 // Returns true if the distance between two colors is less than the specified distance
@@ -71,18 +53,6 @@ func (pw *PixelWand) IsVerified() bool {
 		return 1 == C.int(C.IsPixelWand(pw.pw))
 	}
 	return false
-}
-
-// Increase PixelWand ref counter and set according "can`t be terminated status"
-func (pw *PixelWand) IncreaseCount() {
-	atomic.AddInt64(&pixelWandCounter, int64(1))
-	unsetCanTerminate()
-}
-
-// Decrease PixelWand ref counter and set according "can be terminated status"
-func (pw *PixelWand) DecreaseCount() {
-	atomic.AddInt64(&pixelWandCounter, int64(-1))
-	setCanTerminate()
 }
 
 // Returns the normalized alpha color of the pixel wand
@@ -117,16 +87,12 @@ func (pw *PixelWand) GetBlueQuantum() Quantum {
 
 // Returns the color of the pixel wand as a string
 func (pw *PixelWand) GetColorAsString() string {
-	p := C.PixelGetColorAsString(pw.pw)
-	defer relinquishMemory(unsafe.Pointer(p))
-	return C.GoString(p)
+	return C.GoString(C.PixelGetColorAsString(pw.pw))
 }
 
 // Returns the normalized color of the pixel wand as string
 func (pw *PixelWand) GetColorAsNormalizedString() string {
-	p := C.PixelGetColorAsNormalizedString(pw.pw)
-	defer relinquishMemory(unsafe.Pointer(p))
-	return C.GoString(p)
+	return C.GoString(C.PixelGetColorAsNormalizedString(pw.pw))
 }
 
 // Returns the color count associated with this color

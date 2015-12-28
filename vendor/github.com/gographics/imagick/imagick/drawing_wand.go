@@ -9,28 +9,16 @@ package imagick
 */
 import "C"
 import (
-	"runtime"
-	"sync"
-	"sync/atomic"
 	"unsafe"
 )
 
 type DrawingWand struct {
 	dw *C.DrawingWand
-	sync.Once
-}
-
-func newDrawingWand(cdw *C.DrawingWand) *DrawingWand {
-	dw := &DrawingWand{dw: cdw}
-	runtime.SetFinalizer(dw, Destroy)
-	dw.IncreaseCount()
-
-	return dw
 }
 
 // Returns a drawing wand required for all other methods in the API.
 func NewDrawingWand() *DrawingWand {
-	return newDrawingWand(C.NewDrawingWand())
+	return &DrawingWand{C.NewDrawingWand()}
 }
 
 // Clears resources associated with the drawing wand.
@@ -40,7 +28,7 @@ func (dw *DrawingWand) Clear() {
 
 // Makes an exact copy of the specified wand.
 func (dw *DrawingWand) Clone() *DrawingWand {
-	return newDrawingWand(C.CloneDrawingWand(dw.dw))
+	return &DrawingWand{C.CloneDrawingWand(dw.dw)}
 }
 
 // Frees all resources associated with the drawing wand. Once the drawing wand
@@ -49,26 +37,10 @@ func (dw *DrawingWand) Destroy() {
 	if dw.dw == nil {
 		return
 	}
+	dw.dw = C.DestroyDrawingWand(dw.dw)
+	C.free(unsafe.Pointer(dw.dw))
+	dw.dw = nil
 
-	dw.Do(func() {
-		dw.dw = C.DestroyDrawingWand(dw.dw)
-		relinquishMemory(unsafe.Pointer(dw.dw))
-		dw.dw = nil
-
-		dw.DecreaseCount()
-	})
-}
-
-// Increase DrawingWand ref counter and set according "can`t be terminated status"
-func (dw *DrawingWand) IncreaseCount() {
-	atomic.AddInt64(&drawingWandCounter, int64(1))
-	unsetCanTerminate()
-}
-
-// Decrease DrawingWand ref counter and set according "can be terminated status"
-func (dw *DrawingWand) DecreaseCount() {
-	atomic.AddInt64(&drawingWandCounter, int64(-1))
-	setCanTerminate()
 }
 
 // Adjusts the current affine transformation matrix with the specified affine
@@ -204,7 +176,7 @@ func (dw *DrawingWand) GetBorderColor() (pw *PixelWand) {
 // Obtains the current clipping path ID.
 func (dw *DrawingWand) GetClipPath() string {
 	cscp := C.DrawGetClipPath(dw.dw)
-	defer relinquishMemory(unsafe.Pointer(cscp))
+	defer C.free(unsafe.Pointer(cscp))
 	return C.GoString(cscp)
 }
 
@@ -239,14 +211,14 @@ func (dw *DrawingWand) GetFillRule() FillRule {
 // Returns a string specifying the font used when annotating with text.
 func (dw *DrawingWand) GetFont() string {
 	csfont := C.DrawGetFont(dw.dw)
-	defer relinquishMemory(unsafe.Pointer(csfont))
+	defer C.free(unsafe.Pointer(csfont))
 	return C.GoString(csfont)
 }
 
 // Returns the font family to use when annotating with text.
 func (dw *DrawingWand) GetFontFamily() string {
 	csfamily := C.DrawGetFontFamily(dw.dw)
-	defer relinquishMemory(unsafe.Pointer(csfamily))
+	defer C.free(unsafe.Pointer(csfamily))
 	return C.GoString(csfamily)
 }
 
@@ -365,7 +337,7 @@ func (dw *DrawingWand) GetTextDecoration() DecorationType {
 // Returns a string which specifies the code set used for text annotations.
 func (dw *DrawingWand) GetTextEncoding() string {
 	cstr := C.DrawGetTextEncoding(dw.dw)
-	defer relinquishMemory(unsafe.Pointer(cstr))
+	defer C.free(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
 }
 
@@ -388,7 +360,7 @@ func (dw *DrawingWand) GetTextInterwordSpacing() float64 {
 // graphics calls made since the wand was instantiated.
 func (dw *DrawingWand) GetVectorGraphics() string {
 	cstr := C.DrawGetVectorGraphics(dw.dw)
-	defer relinquishMemory(unsafe.Pointer(cstr))
+	defer C.free(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
 }
 

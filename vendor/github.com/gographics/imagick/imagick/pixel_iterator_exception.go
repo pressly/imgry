@@ -33,7 +33,7 @@ func (pi *PixelIterator) clearException() bool {
 func (pi *PixelIterator) GetLastError() error {
 	var et C.ExceptionType
 	csdescription := C.PixelGetIteratorException(pi.pi, &et)
-	defer relinquishMemory(unsafe.Pointer(csdescription))
+	defer C.free(unsafe.Pointer(csdescription))
 	if ExceptionType(et) != EXCEPTION_UNDEFINED {
 		pi.clearException()
 		return &PixelIteratorException{ExceptionType(C.int(et)), C.GoString(csdescription)}

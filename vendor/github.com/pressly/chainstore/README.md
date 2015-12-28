@@ -195,8 +195,8 @@ just a simple `map[string][]byte` with the LRU cache manager (`lrumgr`).
 Thx to other great projects:
 
 - [github.com/boltdb/bolt](https://github.com/boltdb/bolt)
-- [github.com/mitchellh/goamz](https://github.com/boltdb/bolt)
-- [github.com/syndtr/goleveldb](https://github.com/boltdb/bolt)
+- [github.com/mitchellh/goamz](https://github.com/mitchellh/goamz)
+- [github.com/syndtr/goleveldb](https://github.com/syndtr/goleveldb)
 
 ## Changelog
 

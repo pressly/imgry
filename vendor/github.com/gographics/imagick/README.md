@@ -5,12 +5,12 @@ Go Imagick is a Go bind to ImageMagick's MagickWand C API.
 Current branch compatibility:
 
 ```
-MASTER:   <= ImageMagick 6.8.8
-im-6.8.9: >= ImageMagick 6.8.9
+MASTER:   >= ImageMagick 6.8.9
+im-6.8.8: <= ImageMagick 6.8.8
 ```
 
 It was originally developed and tested with ImageMagick 6.8.5-4, however most official Unix or Linux distributions use older
-versions (6.7.7, 6.8.0, etc) so some features in Go Imagick's master branch are being commented out and will see the light when
+versions (6.7.7, 6.8.0, etc) so some features in Go Imagick's go1 branch are being commented out and will see the light when
 these ImageMagick distributions could easily be updated (from the devops PoV).
 
 # Install
@@ -62,42 +62,6 @@ The examples folder is full with usage examples ported from C ones found in here
 # Quick and partial example
 
 Since this is a CGO binding, Go GC does not manage memory allocated by the C API then is necessary to use Terminate() and Destroy() methods.
-But objects of MagickWand, DrawingWand, PixelIterator and PixelWand are managed by GO GC if you create them by constructors.
-
-```
-package main
-
-import "github.com/gographics/imagick/imagick"
-
-func main() {
-    imagick.Initialize()
-    defer imagick.Terminate()
-
-    mw := imagick.NewMagickWand()
-
-    ...
-}
-```
-
-If you use struct literals, you should free resources manually:
-
-```
-package main
-
-import "github.com/gographics/imagick/imagick"
-
-func main() {
-    imagick.Initialize()
-    defer imagick.Terminate()
-
-    mw := imagick.MagickWand{...}
-    defer mw.Destroy()
-
-    ...
-}
-```
-
-Both methods are compatible if constructor methods used:
 
 ```
 package main
@@ -110,25 +74,6 @@ func main() {
 
     mw := imagick.NewMagickWand()
     defer mw.Destroy()
-
-    ...
-}
-```
-
-But you should NOT mix two ways of object creation:
-```
-package main
-
-import "github.com/gographics/imagick/imagick"
-
-func main() {
-    imagick.Initialize()
-    defer imagick.Terminate()
-
-    mw1 := imagick.MagickWand{...}
-    defer mw1.Destroy()
-
-    mw2 := imagick.NewMagickWand()
 
     ...
 }
