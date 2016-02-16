@@ -5,17 +5,17 @@ RUN apt-get update && apt-get install --no-install-recommends -y build-essential
     zlib1g-dev pkg-config
 
 # Install libturbo-jpeg 1.4.2
-ADD http://sourceforge.net/projects/libjpeg-turbo/files/1.4.2/libjpeg-turbo-official_1.4.2_amd64.deb/download /tmp/libjpeg-turbo-official_1.4.2_amd64.deb
+RUN curl --silent -L https://sourceforge.net/projects/libjpeg-turbo/files/1.4.2/libjpeg-turbo-official_1.4.2_amd64.deb/download -o /tmp/libjpeg-turbo-official_1.4.2_amd64.deb
 RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.4.2_amd64.deb && \
     echo /opt/libjpeg-turbo/lib64 > /etc/ld.so.conf.d/libjpeg-turbo.conf && ldconfig
 
 # Install libpng 1.6.21
-ADD http://downloads.sourceforge.net/project/libpng/libpng16/1.6.21/libpng-1.6.21.tar.gz /tmp/
-RUN cd /tmp && tar -zxvf libpng-1.6.21.tar.gz && cd libpng-1.6.21 && \
+RUN curl --silent -L https://downloads.sourceforge.net/project/libpng/libpng16/1.6.21/libpng-1.6.21.tar.gz | tar -xvzf - -C /tmp
+RUN cd /tmp/libpng-* && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
-ADD http://www.imagemagick.org/download/ImageMagick-6.9.3-2.tar.xz /tmp/
-RUN cd /tmp && tar -xvf ImageMagick-6.9.3-2.tar.xz && cd ImageMagick-6.9.3-2 && \
+RUN curl --silent -L https://www.imagemagick.org/download/ImageMagick-6.9.3-4.tar.xz | tar -xvJf - -C /tmp
+RUN cd /tmp/ImageMagick-* && \
     ./configure --prefix=/usr \
                 --enable-shared \
                 --disable-openmp \
