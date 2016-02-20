@@ -20,7 +20,7 @@ all:
 ##
 tools:
 	go get github.com/pkieltyka/fresh
-	go get github.com/kardianos/govendor
+	go get -u github.com/kardianos/govendor
 
 
 ##
@@ -57,7 +57,7 @@ clean:
 ##
 ## Dependency mgmt
 ##
-vendor-status:
+vendor-list:
 	@govendor list
 
 vendor-update:
