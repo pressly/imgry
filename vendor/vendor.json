@@ -1,0 +1,198 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"path": "github.com/BurntSushi/toml",
+			"revision": "5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e",
+			"revisionTime": "2016-01-02T09:47:48-05:00"
+		},
+		{
+			"path": "github.com/PuerkitoBio/purell",
+			"revision": "d69616f51cdfcd7514d6a380847a152dfc2a749d",
+			"revisionTime": "2015-02-18T08:25:10-05:00"
+		},
+		{
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "446d1c146faa8ed3f4218f056fcd165f6bcfda81",
+			"revisionTime": "2015-12-04T09:14:43-05:00"
+		},
+		{
+			"path": "github.com/boltdb/bolt",
+			"revision": "d359c78f40cc01fa12b65c3d30210dc9c529dd87",
+			"revisionTime": "2015-11-09T09:36:12-07:00"
+		},
+		{
+			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
+			"path": "github.com/davecgh/go-spew/spew",
+			"revision": "f390dcf405f7b83c997eac1b06768bb9f44dec18",
+			"revisionTime": "2016-01-09T21:38:47+01:00"
+		},
+		{
+			"path": "github.com/garyburd/redigo/internal",
+			"revision": "836b6e58b3358112c8291565d01c35b8764070d7",
+			"revisionTime": "2015-12-19T15:20:44-08:00"
+		},
+		{
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "836b6e58b3358112c8291565d01c35b8764070d7",
+			"revisionTime": "2015-12-19T15:20:44-08:00"
+		},
+		{
+			"path": "github.com/gographics/imagick/imagick",
+			"revision": "d267cfc498dab4b91fc6643f9712dcce6d3cde31",
+			"revisionTime": "2015-05-17T18:09:59+12:00"
+		},
+		{
+			"path": "github.com/goware/go-metrics",
+			"revision": "edf8eefa94325c6af825e65c4150504b2267ae51",
+			"revisionTime": "2015-11-30T20:35:31-06:00"
+		},
+		{
+			"path": "github.com/goware/heartbeat",
+			"revision": "602f8b16cd86f4f3f64efbcc3e11d6ac6db763e3",
+			"revisionTime": "2015-08-14T14:58:58-04:00"
+		},
+		{
+			"path": "github.com/goware/httpcoala",
+			"revision": "bb21916a3e9c5e04ed0615ba66e120302d2e552b",
+			"revisionTime": "2015-11-09T16:30:52-05:00"
+		},
+		{
+			"path": "github.com/goware/lg",
+			"revision": "a25069fb531db6a42f4ead402020d84bcf024f6c",
+			"revisionTime": "2015-11-20T13:57:09-05:00"
+		},
+		{
+			"path": "github.com/goware/urlx",
+			"revision": "86bdc24560383254e8b977da31a823eddf904409",
+			"revisionTime": "2016-01-13T12:01:55-05:00"
+		},
+		{
+			"path": "github.com/mitchellh/goamz/aws",
+			"revision": "caaaea8b30ee15616494ee68abd5d8ebbbef05cf",
+			"revisionTime": "2015-03-17T10:43:35-07:00"
+		},
+		{
+			"path": "github.com/mitchellh/goamz/s3",
+			"revision": "caaaea8b30ee15616494ee68abd5d8ebbbef05cf",
+			"revisionTime": "2015-03-17T10:43:35-07:00"
+		},
+		{
+			"path": "github.com/opennota/urlesc",
+			"revision": "5fa9ff0392746aeae1c4b37fcc42c65afa7a9587",
+			"revisionTime": "2015-02-08T15:19:50+07:00"
+		},
+		{
+			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
+			"revisionTime": "2016-01-29T19:31:06Z"
+		},
+		{
+			"path": "github.com/pressly/chainstore",
+			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
+			"revisionTime": "2015-12-22T06:31:59-05:00"
+		},
+		{
+			"path": "github.com/pressly/chainstore/boltstore",
+			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
+			"revisionTime": "2015-12-22T06:31:59-05:00"
+		},
+		{
+			"path": "github.com/pressly/chainstore/lrumgr",
+			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
+			"revisionTime": "2015-12-22T06:31:59-05:00"
+		},
+		{
+			"path": "github.com/pressly/chainstore/memstore",
+			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
+			"revisionTime": "2015-12-22T06:31:59-05:00"
+		},
+		{
+			"path": "github.com/pressly/chainstore/metricsmgr",
+			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
+			"revisionTime": "2015-12-22T06:31:59-05:00"
+		},
+		{
+			"path": "github.com/pressly/chainstore/s3store",
+			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
+			"revisionTime": "2015-12-22T06:31:59-05:00"
+		},
+		{
+			"path": "github.com/pressly/chi",
+			"revision": "38f75e3251f44b774b2bd549d1aadb02af8facec",
+			"revisionTime": "2016-01-26T10:56:25-05:00"
+		},
+		{
+			"path": "github.com/pressly/chi/middleware",
+			"revision": "38f75e3251f44b774b2bd549d1aadb02af8facec",
+			"revisionTime": "2016-01-26T10:56:25-05:00"
+		},
+		{
+			"path": "github.com/pressly/consistentrd",
+			"revision": "43f3d1020fc03cf1271313ec9b95c8a967c0b878",
+			"revisionTime": "2015-04-24T10:46:21-04:00"
+		},
+		{
+			"path": "github.com/rs/cors",
+			"revision": "eb527c8097e0f19a3ff7b253a3fe70545070f420",
+			"revisionTime": "2015-08-29T22:34:20-07:00"
+		},
+		{
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "f390dcf405f7b83c997eac1b06768bb9f44dec18",
+			"revisionTime": "2016-01-09T21:38:47+01:00"
+		},
+		{
+			"path": "github.com/tobi/airbrake-go",
+			"revision": "a3cdd910a3ffef88a20fbecc10363a520ad61a0a",
+			"revisionTime": "2015-10-05T14:14:55-04:00"
+		},
+		{
+			"path": "github.com/unrolled/render",
+			"revision": "40a2dfa24398d37b4a14938442a0f4fe4307b929",
+			"revisionTime": "2015-12-03T23:21:36-06:00"
+		},
+		{
+			"path": "github.com/vaughan0/go-ini",
+			"revision": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1",
+			"revisionTime": "2013-09-23T16:52:12+02:00"
+		},
+		{
+			"path": "github.com/zenazn/goji/graceful",
+			"revision": "bf843a174a08e846246b8945f8a9a853d84a256a",
+			"revisionTime": "2015-11-20T12:03:11-08:00"
+		},
+		{
+			"path": "github.com/zenazn/goji/graceful/listener",
+			"revision": "bf843a174a08e846246b8945f8a9a853d84a256a",
+			"revisionTime": "2015-11-20T12:03:11-08:00"
+		},
+		{
+			"path": "golang.org/x/net/context",
+			"revision": "b6d7b1396ec874c3b00f6c84cd4301a17c56c8ed",
+			"revisionTime": "2016-02-16T22:16:06+09:00"
+		},
+		{
+			"path": "golang.org/x/net/context/ctxhttp",
+			"revision": "b6d7b1396ec874c3b00f6c84cd4301a17c56c8ed",
+			"revisionTime": "2016-02-16T22:16:06+09:00"
+		},
+		{
+			"path": "golang.org/x/net/idna",
+			"revision": "b6d7b1396ec874c3b00f6c84cd4301a17c56c8ed",
+			"revisionTime": "2016-02-16T22:16:06+09:00"
+		},
+		{
+			"path": "golang.org/x/sys/unix",
+			"revision": "833a04a10549a95dc34458c195cbad61bbb6cb4d",
+			"revisionTime": "2015-12-10T17:34:15-08:00"
+		},
+		{
+			"path": "stathat.com/c/consistent",
+			"revision": "748f01b59d1b2218efe39513039e9ee31266d7c7",
+			"revisionTime": "2015-03-22T21:41:28-05:00"
+		}
+	]
+}

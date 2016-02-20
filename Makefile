@@ -18,13 +18,9 @@ all:
 ##
 ## Tools
 ##
-tools: dist-tools
+tools:
 	go get github.com/pkieltyka/fresh
-
-dist-tools:
-	@mkdir -p ./bin
-	go get github.com/pressly/glock
-	go get github.com/pressly/gv
+	go get github.com/kardianos/govendor
 
 
 ##
@@ -61,16 +57,8 @@ clean:
 ##
 ## Dependency mgmt
 ##
-deps:
-	@glock sync github.com/pressly/imgry
+vendor-status:
+	@govendor list
 
-update-deps:
-	@echo "Updating Glockfile with package versions from GOPATH..."
-	@rm -rf ./vendor
-	@glock save github.com/pressly/imgry
-	@$(MAKE) vendor
-
-vendor:
-	@echo "Syncing dependencies into vendor directory..."
-	@rm -rf ./vendor
-	@gv < Glockfile
+vendor-update:
+	@govendor update +external
