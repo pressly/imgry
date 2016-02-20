@@ -61,4 +61,4 @@ vendor-list:
 	@govendor list
 
 vendor-update:
-	@govendor update +external
+	@govendor update +vendor
