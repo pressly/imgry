@@ -20,7 +20,7 @@ all:
 ##
 tools:
 	go get github.com/pkieltyka/fresh
-	go get -u github.com/kardianos/govendor
+	go get -u github.com/pkieltyka/govendor
 
 
 ##
