@@ -38,7 +38,7 @@ func (dw *DrawingWand) Destroy() {
 		return
 	}
 	dw.dw = C.DestroyDrawingWand(dw.dw)
-	C.free(unsafe.Pointer(dw.dw))
+	relinquishMemory(unsafe.Pointer(dw.dw))
 	dw.dw = nil
 
 }
@@ -122,8 +122,8 @@ func (dw *DrawingWand) Circle(ox, oy, px, py float64) {
 // mw: Image to composite is obtained from this wand.
 //
 func (dw *DrawingWand) Composite(compose CompositeOperator, x, y, width, height float64, mw *MagickWand) error {
-	C.DrawComposite(dw.dw, C.CompositeOperator(compose), C.double(x), C.double(y), C.double(width), C.double(height), mw.mw)
-	return dw.GetLastError()
+	ok := C.DrawComposite(dw.dw, C.CompositeOperator(compose), C.double(x), C.double(y), C.double(width), C.double(height), mw.mw)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Draws color on image using the current fill color, starting at specified
@@ -176,7 +176,7 @@ func (dw *DrawingWand) GetBorderColor() (pw *PixelWand) {
 // Obtains the current clipping path ID.
 func (dw *DrawingWand) GetClipPath() string {
 	cscp := C.DrawGetClipPath(dw.dw)
-	defer C.free(unsafe.Pointer(cscp))
+	defer relinquishMemory(unsafe.Pointer(cscp))
 	return C.GoString(cscp)
 }
 
@@ -211,21 +211,21 @@ func (dw *DrawingWand) GetFillRule() FillRule {
 // Returns a string specifying the font used when annotating with text.
 func (dw *DrawingWand) GetFont() string {
 	csfont := C.DrawGetFont(dw.dw)
-	defer C.free(unsafe.Pointer(csfont))
+	defer relinquishMemory(unsafe.Pointer(csfont))
 	return C.GoString(csfont)
 }
 
 // Returns the font family to use when annotating with text.
 func (dw *DrawingWand) GetFontFamily() string {
 	csfamily := C.DrawGetFontFamily(dw.dw)
-	defer C.free(unsafe.Pointer(csfamily))
+	defer relinquishMemory(unsafe.Pointer(csfamily))
 	return C.GoString(csfamily)
 }
 
 // Gets the image X and Y resolution.
 func (dw *DrawingWand) GetFontResolution() (x, y float64, err error) {
-	C.DrawGetFontResolution(dw.dw, (*C.double)(&x), (*C.double)(&y))
-	err = dw.GetLastError()
+	ok := C.DrawGetFontResolution(dw.dw, (*C.double)(&x), (*C.double)(&y))
+	err = dw.getLastErrorIfFailed(ok)
 	return
 }
 
@@ -337,7 +337,7 @@ func (dw *DrawingWand) GetTextDecoration() DecorationType {
 // Returns a string which specifies the code set used for text annotations.
 func (dw *DrawingWand) GetTextEncoding() string {
 	cstr := C.DrawGetTextEncoding(dw.dw)
-	defer C.free(unsafe.Pointer(cstr))
+	defer relinquishMemory(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
 }
 
@@ -360,7 +360,7 @@ func (dw *DrawingWand) GetTextInterwordSpacing() float64 {
 // graphics calls made since the wand was instantiated.
 func (dw *DrawingWand) GetVectorGraphics() string {
 	cstr := C.DrawGetVectorGraphics(dw.dw)
-	defer C.free(unsafe.Pointer(cstr))
+	defer relinquishMemory(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
 }
 
@@ -702,8 +702,8 @@ func (dw *DrawingWand) PopDefs() {
 
 // Terminates a pattern definition.
 func (dw *DrawingWand) PopPattern() error {
-	C.DrawPopPattern(dw.dw)
-	return dw.GetLastError()
+	ok := C.DrawPopPattern(dw.dw)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Starts a clip path definition which is comprized of any number of drawing
@@ -737,8 +737,8 @@ func (dw *DrawingWand) PushDefs() {
 func (dw *DrawingWand) PushPattern(patternId string, x, y, width, height float64) error {
 	cstr := C.CString(patternId)
 	defer C.free(unsafe.Pointer(cstr))
-	C.DrawPushPattern(dw.dw, cstr, C.double(x), C.double(y), C.double(width), C.double(height))
-	return dw.GetLastError()
+	ok := C.DrawPushPattern(dw.dw, cstr, C.double(x), C.double(y), C.double(width), C.double(height))
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Draws a rectangle given two coordinates and using the current stroke, stroke
@@ -797,8 +797,8 @@ func (dw *DrawingWand) SetBorderColor(borderWand *PixelWand) {
 func (dw *DrawingWand) SetClipPath(clipMaskId string) error {
 	cstr := C.CString(clipMaskId)
 	defer C.free(unsafe.Pointer(cstr))
-	C.DrawSetClipPath(dw.dw, cstr)
-	return dw.GetLastError()
+	ok := C.DrawSetClipPath(dw.dw, cstr)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Set the polygon fill rule to be used by the clipping path.
@@ -827,8 +827,8 @@ func (dw *DrawingWand) SetFillOpacity(opacity float64) {
 //
 // xRes, yRes: the image x and y resolutions
 func (dw *DrawingWand) SetFontResolution(xRes, yRes float64) error {
-	C.DrawSetFontResolution(dw.dw, C.double(xRes), C.double(yRes))
-	return dw.GetLastError()
+	ok := C.DrawSetFontResolution(dw.dw, C.double(xRes), C.double(yRes))
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Sets the opacity to use when drawing using the fill or stroke color or
@@ -845,8 +845,8 @@ func (dw *DrawingWand) SetOpacity(opacity float64) {
 func (dw *DrawingWand) SetFillPatternURL(fillUrl string) error {
 	cstr := C.CString(fillUrl)
 	defer C.free(unsafe.Pointer(cstr))
-	C.DrawSetFillPatternURL(dw.dw, cstr)
-	return dw.GetLastError()
+	ok := C.DrawSetFillPatternURL(dw.dw, cstr)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Sets the fill rule to use while drawing polygons.
@@ -858,16 +858,16 @@ func (dw *DrawingWand) SetFillRule(fillRule FillRule) {
 func (dw *DrawingWand) SetFont(fontName string) error {
 	csFontName := C.CString(fontName)
 	defer C.free(unsafe.Pointer(csFontName))
-	C.DrawSetFont(dw.dw, csFontName)
-	return dw.GetLastError()
+	ok := C.DrawSetFont(dw.dw, csFontName)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Sets the font family to use when annotating with text.
 func (dw *DrawingWand) SetFontFamily(fontFamily string) error {
 	csFontFamily := C.CString(fontFamily)
 	defer C.free(unsafe.Pointer(csFontFamily))
-	C.DrawSetFontFamily(dw.dw, csFontFamily)
-	return dw.GetLastError()
+	ok := C.DrawSetFontFamily(dw.dw, csFontFamily)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Sets the font pointsize to use when annotating with text.
@@ -912,8 +912,8 @@ func (dw *DrawingWand) SetStrokeColor(strokeWand *PixelWand) {
 func (dw *DrawingWand) SetStrokePatternURL(strokeUrl string) error {
 	csStrokeUrl := C.CString(strokeUrl)
 	defer C.free(unsafe.Pointer(csStrokeUrl))
-	C.DrawSetStrokePatternURL(dw.dw, csStrokeUrl)
-	return dw.GetLastError()
+	ok := C.DrawSetStrokePatternURL(dw.dw, csStrokeUrl)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Controls whether stroked outlines are antialiased. Stroked outlines are
@@ -934,15 +934,15 @@ func (dw *DrawingWand) SetStrokeAntialias(antialias bool) {
 // stroke dash array might contain the members 5 3 2.
 func (dw *DrawingWand) SetStrokeDashArray(dash []float64) error {
 	if len(dash) == 0 {
-		C.DrawSetStrokeDashArray(dw.dw, C.size_t(0), nil)
-		return dw.GetLastError()
+		ok := C.DrawSetStrokeDashArray(dw.dw, C.size_t(0), nil)
+		return dw.getLastErrorIfFailed(ok)
 	}
 	cdash := [1 << 16]C.double{}
 	for k, v := range dash {
 		cdash[k] = C.double(v)
 	}
-	C.DrawSetStrokeDashArray(dw.dw, C.size_t(len(dash)), (*C.double)(&cdash[0]))
-	return dw.GetLastError()
+	ok := C.DrawSetStrokeDashArray(dw.dw, C.size_t(len(dash)), (*C.double)(&cdash[0]))
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Specifies the offset into the dash pattern to start the dash.
@@ -1035,8 +1035,8 @@ func (dw *DrawingWand) SetTextUnderColor(underWand *PixelWand) {
 func (dw *DrawingWand) SetVectorGraphics(xml string) error {
 	csxml := C.CString(xml)
 	defer C.free(unsafe.Pointer(csxml))
-	C.DrawSetVectorGraphics(dw.dw, csxml)
-	return dw.GetLastError()
+	ok := C.DrawSetVectorGraphics(dw.dw, csxml)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Skews the current coordinate system in the horizontal direction.
@@ -1096,8 +1096,8 @@ func (dw *DrawingWand) PeekDrawingWand() *DrawInfo {
 // to pop more drawing wands than have been pushed, and it is proper form to
 // pop all drawing wands which have been pushed.
 func (dw *DrawingWand) PopDrawingWand() error {
-	C.PopDrawingWand(dw.dw)
-	return dw.GetLastError()
+	ok := C.PopDrawingWand(dw.dw)
+	return dw.getLastErrorIfFailed(ok)
 }
 
 // Clones the current drawing wand to create a new drawing wand. The original
@@ -1105,6 +1105,6 @@ func (dw *DrawingWand) PopDrawingWand() error {
 // wands are stored on a drawing wand stack. For every Pop there must have
 // already been an equivalent Push.
 func (dw *DrawingWand) PushDrawingWand() error {
-	C.PushDrawingWand(dw.dw)
-	return dw.GetLastError()
+	ok := C.PushDrawingWand(dw.dw)
+	return dw.getLastErrorIfFailed(ok)
 }
