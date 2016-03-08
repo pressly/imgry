@@ -30,18 +30,18 @@
 		},
 		{
 			"path": "github.com/garyburd/redigo/internal",
-			"revision": "836b6e58b3358112c8291565d01c35b8764070d7",
-			"revisionTime": "2015-12-19T15:20:44-08:00"
+			"revision": "4ed1111375cbeb698249ffe48dd463e9b0a63a7a",
+			"revisionTime": "2016-03-02T15:46:02-08:00"
 		},
 		{
 			"path": "github.com/garyburd/redigo/redis",
-			"revision": "836b6e58b3358112c8291565d01c35b8764070d7",
-			"revisionTime": "2015-12-19T15:20:44-08:00"
+			"revision": "4ed1111375cbeb698249ffe48dd463e9b0a63a7a",
+			"revisionTime": "2016-03-02T15:46:02-08:00"
 		},
 		{
 			"path": "github.com/gographics/imagick/imagick",
-			"revision": "cb0533435166e7c5c95a58f20a1ee351c6c827aa",
-			"revisionTime": "2016-03-05T09:27:07+13:00"
+			"revision": "f42e1c26a3ac7d23f95a8d35bab6fe990e482894",
+			"revisionTime": "2016-03-06T09:05:52+13:00"
 		},
 		{
 			"path": "github.com/goware/go-metrics",
