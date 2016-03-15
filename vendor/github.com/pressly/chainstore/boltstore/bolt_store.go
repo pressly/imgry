@@ -81,7 +81,9 @@ func (s *boltStore) Get(ctx context.Context, key string) (val []byte, err error)
 	default:
 		err = s.db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(s.bucketName)
-			val = b.Get([]byte(key))
+			raw := b.Get([]byte(key))
+			val = make([]byte, len(raw))
+			copy(val, raw)
 			return nil
 		})
 		return

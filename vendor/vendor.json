@@ -40,8 +40,8 @@
 		},
 		{
 			"path": "github.com/gographics/imagick/imagick",
-			"revision": "f42e1c26a3ac7d23f95a8d35bab6fe990e482894",
-			"revisionTime": "2016-03-06T09:05:52+13:00"
+			"revision": "df9c579ec5f076e2588f36c4bd7647dc2c58c8c9",
+			"revisionTime": "2016-03-15T13:54:13+13:00"
 		},
 		{
 			"path": "github.com/goware/go-metrics",
@@ -91,33 +91,33 @@
 		},
 		{
 			"path": "github.com/pressly/chainstore",
-			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
-			"revisionTime": "2015-12-22T06:31:59-05:00"
+			"revision": "4954b83636059e84c4842388712780f105c8310d",
+			"revisionTime": "2016-03-01T17:20:03-05:00"
 		},
 		{
 			"path": "github.com/pressly/chainstore/boltstore",
-			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
-			"revisionTime": "2015-12-22T06:31:59-05:00"
+			"revision": "4954b83636059e84c4842388712780f105c8310d",
+			"revisionTime": "2016-03-01T17:20:03-05:00"
 		},
 		{
 			"path": "github.com/pressly/chainstore/lrumgr",
-			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
-			"revisionTime": "2015-12-22T06:31:59-05:00"
+			"revision": "4954b83636059e84c4842388712780f105c8310d",
+			"revisionTime": "2016-03-01T17:20:03-05:00"
 		},
 		{
 			"path": "github.com/pressly/chainstore/memstore",
-			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
-			"revisionTime": "2015-12-22T06:31:59-05:00"
+			"revision": "4954b83636059e84c4842388712780f105c8310d",
+			"revisionTime": "2016-03-01T17:20:03-05:00"
 		},
 		{
 			"path": "github.com/pressly/chainstore/metricsmgr",
-			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
-			"revisionTime": "2015-12-22T06:31:59-05:00"
+			"revision": "4954b83636059e84c4842388712780f105c8310d",
+			"revisionTime": "2016-03-01T17:20:03-05:00"
 		},
 		{
 			"path": "github.com/pressly/chainstore/s3store",
-			"revision": "0c92391784d550612c5ba317c3b36da5a8442ede",
-			"revisionTime": "2015-12-22T06:31:59-05:00"
+			"revision": "4954b83636059e84c4842388712780f105c8310d",
+			"revisionTime": "2016-03-01T17:20:03-05:00"
 		},
 		{
 			"path": "github.com/pressly/chi",
@@ -171,18 +171,18 @@
 		},
 		{
 			"path": "golang.org/x/net/context",
-			"revision": "4599ae7937fce9b670ce32b8ad32bbb7ae726b3e",
-			"revisionTime": "2016-02-20T14:44:54-08:00"
+			"revision": "e7da8edaa52631091740908acaf2c2d4c9b3ce90",
+			"revisionTime": "2016-03-05T22:47:48Z"
 		},
 		{
 			"path": "golang.org/x/net/context/ctxhttp",
-			"revision": "4599ae7937fce9b670ce32b8ad32bbb7ae726b3e",
-			"revisionTime": "2016-02-20T14:44:54-08:00"
+			"revision": "e7da8edaa52631091740908acaf2c2d4c9b3ce90",
+			"revisionTime": "2016-03-05T22:47:48Z"
 		},
 		{
 			"path": "golang.org/x/net/idna",
-			"revision": "4599ae7937fce9b670ce32b8ad32bbb7ae726b3e",
-			"revisionTime": "2016-02-20T14:44:54-08:00"
+			"revision": "e7da8edaa52631091740908acaf2c2d4c9b3ce90",
+			"revisionTime": "2016-03-05T22:47:48Z"
 		},
 		{
 			"path": "golang.org/x/sys/unix",
