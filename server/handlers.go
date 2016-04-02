@@ -38,7 +38,7 @@ func BucketGetIndex(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
+	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
 	if err != nil {
 		respond.ImageError(w, 422, err)
 		return
@@ -58,7 +58,9 @@ func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request
 	fetchUrl = u.String()
 
 	imKey := sha1Hash(fetchUrl) // transform to what is expected..
-	chi.URLParams(ctx)["key"] = imKey
+
+	rctx := chi.RouteContext(ctx)
+	rctx.Params.Set("key", imKey)
 
 	// First check if we have the original.. a bit of extra overhead, but its okay
 	_, err = bucket.DbFindImage(ctx, imKey, nil)
@@ -85,7 +87,7 @@ func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request
 func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	// TODO: bucket binding should happen in a middleware... refactor all handlers
 	// that use it..
-	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
+	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
 	if err != nil {
 		lg.Errorf("Failed to create bucket for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
@@ -99,7 +101,7 @@ func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	im, err := bucket.GetImageSize(ctx, chi.URLParams(ctx)["key"], sizing)
+	im, err := bucket.GetImageSize(ctx, chi.URLParam(ctx, "key"), sizing)
 	if err != nil {
 		lg.Errorf("Failed to get image for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
@@ -210,7 +212,7 @@ func BucketImageUpload(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		app.Config.Chainstore.S3SecretKey,
 		app.Config.Chainstore.S3Bucket)
 
-	path := s3Path(chi.URLParams(ctx)["bucket"], im.Data, im.Format)
+	path := s3Path(chi.URLParam(ctx, "bucket"), im.Data, im.Format)
 
 	url, err = s3Upload(s3Bucket, path, im)
 	if err != nil {
@@ -232,7 +234,7 @@ func BucketImageUpload(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func BucketAddItems(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
+	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
 	if err != nil {
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return
@@ -262,7 +264,7 @@ func BucketAddItems(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(chi.URLParams(ctx)["bucket"])
+	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
 	if err != nil {
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return
@@ -271,9 +273,10 @@ func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	pUrl := r.URL.Query().Get("url")
 	if pUrl != "" {
 		pKey := sha1Hash(pUrl) // transform to what is expected..
-		chi.URLParams(ctx)["key"] = pKey
+		rctx := chi.RouteContext(ctx)
+		rctx.Params.Set("key", pKey)
 	}
-	imageKey := chi.URLParams(ctx)["key"]
+	imageKey := chi.URLParam(ctx, "key")
 	if imageKey == "" {
 		respond.JSON(w, 422, map[string]interface{}{
 			"error": "Unable to determine the key for the delete operation",
@@ -292,6 +295,7 @@ func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 // DEPRECATED
 func BucketV0FetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	chi.URLParams(ctx)["bucket"] = "tmp" // we imply the bucket name..
+	rctx := chi.RouteContext(ctx)
+	rctx.Params.Set("bucket", "tmp") // we imply the bucket name..
 	BucketFetchItem(ctx, w, r)
 }

@@ -19,11 +19,12 @@ scaled very well.
 
 ## Features
 
-* Lightweight - cloc`d in ~600 LOC for the chi router
-* Fast - yes, see [benchmarks](#benchmarks)
-* Expressive routing - middlewares, inline middleware groups/chains, and subrouter mounting
-* Request context control (value chaining, deadlines and timeouts) - built on `net/context`
-* Robust (tested, used in production)
+* **Lightweight** - cloc'd in <1000 LOC for the chi router
+* **Fast** - yes, see [benchmarks](#benchmarks)
+* **Zero allocations** - no GC pressure during routing
+* **Designed for modular/composable APIs** - middlewares, inline middleware groups/chains, and subrouter mounting
+* **Context control** - built on `net/context` with value chaining, deadlines and timeouts
+* **Robust** - tested / used in production
 
 ## Router design
 
@@ -122,7 +123,7 @@ func StdHandler(w http.ResponseWriter, r *http.Request) {
 ```go
 // net/context HTTP request handler
 func CtxHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-  userID := chi.URLParams(ctx)["userID"] // from a route like /users/:userID
+  userID := chi.URLParam(ctx, "userID") // from a route like /users/:userID
   key := ctx.Value("key").(string)
   w.Write([]byte(fmt.Sprintf("hi %v, %v", userID, key)))
 }
@@ -200,7 +201,7 @@ func main() {
 
 func ArticleCtx(next chi.Handler) chi.Handler {
   return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-    articleID := chi.URLParams(ctx)["articleID"]
+    articleID := chi.URLParam(ctx, "articleID")
     article, err := dbGetArticle(articleID)
     if err != nil {
       http.Error(w, http.StatusText(404), 404)
@@ -284,11 +285,24 @@ See discussions:
 
 The benchmark suite: https://github.com/pkieltyka/go-http-routing-benchmark
 
-The results as of Nov. 6, 2015 - https://gist.github.com/pkieltyka/505b07b09f5c63e36ef5
-
-Note: by design, chi allocates new routing URLParams map for each request, as opposed
-to reusing URLParams from a pool.
-
+```shell
+BenchmarkChi_Param            10000000         128 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_Param5            5000000         303 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_Param20           1000000        1064 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_ParamWrite       10000000         181 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_GithubStatic     10000000         193 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_GithubParam       5000000         344 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_GithubAll           20000       63100 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_GPlusStatic      20000000         124 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_GPlusParam       10000000         172 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_GPlus2Params      5000000         232 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_GPlusAll           500000        2684 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_ParseStatic      10000000         135 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_ParseParam       10000000         154 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_Parse2Params     10000000         192 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_ParseAll           300000        4637 ns/op         0 B/op        0 allocs/op
+BenchmarkChi_StaticAll           50000       37583 ns/op         0 B/op        0 allocs/op
+```
 
 ## Credits
 
@@ -297,18 +311,6 @@ to reusing URLParams from a pool.
     sources from goji.
 * Armon Dadgar for https://github.com/armon/go-radix
 * Contributions: [@VojtechVitek](https://github.com/VojtechVitek)
-
-
-## TODO
-
-* Mux options
-  * Trailing slash?
-  * Case insensitive paths?
-  * GET for HEAD requests (auto fallback)?
-* Register error handler (500's), ServerError() handler?
-* HTTP2 example
-  * both http 1.1 and http2 automatically.. just turn it on :)
-* Regexp support in router "/:id([0-9]+)" or "#id^[0-9]+$" or ..
 
 We'll be more than happy to see [your contributions](./CONTRIBUTING.md)!
 

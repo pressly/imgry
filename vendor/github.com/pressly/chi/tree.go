@@ -154,33 +154,36 @@ func (n *node) getEdge(label byte) *node {
 func (n *node) findEdge(ntyp nodeTyp, label byte) *node {
 	subedges := n.edges[ntyp]
 	num := len(subedges)
-	idx := sort.Search(num, func(i int) bool {
-		switch ntyp {
-		case ntStatic:
-			return subedges[i].label >= label
-		default: // wild nodes
-			// TODO: right now we match them all.. but regexp should
-			// run through regexp matcher
-			return true
+	idx := 0
+
+	switch ntyp {
+	case ntStatic:
+		i, j := 0, num-1
+		for i <= j {
+			idx = i + (j-i)/2
+			if label > subedges[idx].label {
+				i = idx + 1
+			} else if label < subedges[idx].label {
+				j = idx - 1
+			} else {
+				i = num // breaks cond
+			}
 		}
-	})
-
-	if idx >= num {
-		return nil
-	}
-
-	if subedges[idx].node.typ == ntStatic && subedges[idx].label == label {
+		if subedges[idx].label != label {
+			return nil
+		}
 		return subedges[idx].node
-	} else if subedges[idx].node.typ > ntStatic {
+
+	default: // wild nodes
+		// TODO: right now we match them all.. but regexp should
+		// run through regexp matcher
 		return subedges[idx].node
 	}
-
-	return nil
 }
 
 // Recursive edge traversal by checking all nodeTyp groups along the way.
 // It's like searching through a three-dimensional radix trie.
-func (n *node) findNode(path string, params map[string]string) *node {
+func (n *node) findNode(ctx *Context, path string) *node {
 	nn := n
 	search := path
 
@@ -213,9 +216,9 @@ func (n *node) findNode(path string, params map[string]string) *node {
 			}
 
 			if xn.typ == ntCatchAll {
-				params["*"] = xsearch
+				ctx.Params.Add("*", xsearch)
 			} else {
-				params[xn.prefix[1:]] = xsearch[:p]
+				ctx.Params.Add(xn.prefix[1:], xsearch[:p])
 			}
 
 			xsearch = xsearch[p:]
@@ -233,7 +236,7 @@ func (n *node) findNode(path string, params map[string]string) *node {
 		}
 
 		// recursively find the next node..
-		fin := xn.findNode(xsearch, params)
+		fin := xn.findNode(ctx, xsearch)
 		if fin != nil {
 			// found a node, return it
 			return fin
@@ -241,9 +244,9 @@ func (n *node) findNode(path string, params map[string]string) *node {
 			// let's remove the param here if it was set
 			if xn.typ > ntStatic {
 				if xn.typ == ntCatchAll {
-					delete(params, "*")
+					ctx.Params.Del("*")
 				} else {
-					delete(params, xn.prefix[1:])
+					ctx.Params.Del(xn.prefix[1:])
 				}
 			}
 		}
@@ -254,22 +257,11 @@ func (n *node) findNode(path string, params map[string]string) *node {
 
 type edges []edge
 
-func (e edges) Len() int {
-	return len(e)
-}
-
 // Sort the list of edges by label
-func (e edges) Less(i, j int) bool {
-	return e[i].label < e[j].label
-}
-
-func (e edges) Swap(i, j int) {
-	e[i], e[j] = e[j], e[i]
-}
-
-func (e edges) Sort() {
-	sort.Sort(e)
-}
+func (e edges) Len() int           { return len(e) }
+func (e edges) Less(i, j int) bool { return e[i].label < e[j].label }
+func (e edges) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
+func (e edges) Sort()              { sort.Sort(e) }
 
 // Tree implements a radix tree. This can be treated as a
 // Dictionary abstract data type. The main advantage over
@@ -368,8 +360,8 @@ func (t *tree) Insert(pattern string, handler Handler) {
 	return
 }
 
-func (t *tree) Find(path string, params map[string]string) Handler {
-	node := t.root.findNode(path, params)
+func (t *tree) Find(ctx *Context, path string) Handler {
+	node := t.root.findNode(ctx, path)
 	if node == nil {
 		return nil
 	}
@@ -414,4 +406,48 @@ func (t *tree) longestPrefix(k1, k2 string) int {
 		}
 	}
 	return i
+}
+
+type param struct {
+	Key, Value string
+}
+
+type params []param
+
+func (ps *params) Add(key string, value string) {
+	*ps = append(*ps, param{key, value})
+}
+
+func (ps params) Get(key string) string {
+	for _, p := range ps {
+		if p.Key == key {
+			return p.Value
+		}
+	}
+	return ""
+}
+
+func (ps *params) Set(key string, value string) {
+	idx := -1
+	for i, p := range *ps {
+		if p.Key == key {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		(*ps).Add(key, value)
+	} else {
+		(*ps)[idx] = param{key, value}
+	}
+}
+
+func (ps *params) Del(key string) string {
+	for i, p := range *ps {
+		if p.Key == key {
+			*ps = append((*ps)[:i], (*ps)[i+1:]...)
+			return p.Value
+		}
+	}
+	return ""
 }

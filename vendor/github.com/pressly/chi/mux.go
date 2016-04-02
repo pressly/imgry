@@ -3,6 +3,7 @@ package chi
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"golang.org/x/net/context"
 )
@@ -10,6 +11,9 @@ import (
 var _ Router = &Mux{}
 
 type Mux struct {
+	// Parent context for the server
+	parentCtx context.Context
+
 	// The middleware stack, supporting..
 	// func(http.Handler) http.Handler and func(chi.Handler) chi.Handler
 	middlewares []interface{}
@@ -23,6 +27,9 @@ type Mux struct {
 	// Controls the behaviour of middleware chain generation when a mux
 	// is registered as an inline group inside another mux.
 	inline bool
+
+	// Routing context pool
+	pool sync.Pool
 }
 
 type methodTyp int
@@ -54,15 +61,18 @@ var methodMap = map[string]methodTyp{
 	"TRACE":   mTRACE,
 }
 
-type ctxKey int
+func NewMux(parent ...context.Context) *Mux {
+	pctx := context.Background()
+	if len(parent) > 0 {
+		pctx = parent[0]
+	}
 
-const (
-	URLParamsCtxKey ctxKey = iota
-	SubRouterCtxKey
-)
+	mux := &Mux{parentCtx: pctx, router: newTreeRouter(), handler: nil}
+	mux.pool.New = func() interface{} {
+		return newContext(pctx)
+	}
 
-func NewMux() *Mux {
-	return &Mux{router: newTreeRouter(), handler: nil}
+	return mux
 }
 
 // Append to the middleware stack
@@ -115,6 +125,14 @@ func (mx *Mux) Options(pattern string, handlers ...interface{}) {
 // NotFound sets a custom handler for the case when no routes match
 func (mx *Mux) NotFound(h HandlerFunc) {
 	mx.router.notFoundHandler = &h
+}
+
+// Serve static files under a path
+func (mx *Mux) FileServer(path string, root http.FileSystem) {
+	fs := http.StripPrefix(path, http.FileServer(root))
+	mx.Get(path+"*", func(w http.ResponseWriter, r *http.Request) {
+		fs.ServeHTTP(w, r)
+	})
 }
 
 func (mx *Mux) handle(method methodTyp, pattern string, handlers ...interface{}) {
@@ -188,8 +206,8 @@ func (mx *Mux) Mount(path string, handlers ...interface{}) {
 
 	// Wrap the sub-router in a handlerFunc to scope the request path for routing.
 	subHandler := HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-		path := URLParams(ctx)["*"]
-		ctx = context.WithValue(ctx, SubRouterCtxKey, "/"+path)
+		rctx := RouteContext(ctx)
+		rctx.RoutePath = "/" + rctx.Params.Del("*")
 		h.ServeHTTPC(ctx, w, r)
 	})
 
@@ -202,7 +220,10 @@ func (mx *Mux) Mount(path string, handlers ...interface{}) {
 }
 
 func (mx *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	mx.ServeHTTPC(context.Background(), w, r)
+	ctx := mx.pool.Get().(*Context)
+	mx.ServeHTTPC(ctx, w, r)
+	ctx.reset()
+	mx.pool.Put(ctx)
 }
 
 func (mx *Mux) ServeHTTPC(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -238,18 +259,15 @@ func (tr treeRouter) NotFoundHandlerFn() HandlerFunc {
 }
 
 func (tr treeRouter) ServeHTTPC(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	// Allocate a new url params map at the start of each request.
-	params, ok := ctx.Value(URLParamsCtxKey).(map[string]string)
-	if !ok || params == nil {
-		params = make(map[string]string, 0)
-		ctx = context.WithValue(ctx, URLParamsCtxKey, params)
+	// Grab the root context object
+	rctx, _ := ctx.(*Context)
+	if rctx == nil {
+		rctx = ctx.Value(routeCtxKey).(*Context)
 	}
 
 	// The request path
-	routePath, ok := ctx.Value(SubRouterCtxKey).(string)
-	if ok {
-		delete(params, "*")
-	} else {
+	routePath := rctx.RoutePath
+	if routePath == "" {
 		routePath = r.URL.Path
 	}
 
@@ -261,7 +279,8 @@ func (tr treeRouter) ServeHTTPC(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	// Find the handler in the router
-	cxh := tr.routes[method].Find(routePath, params)
+	cxh := tr.routes[method].Find(rctx, routePath)
+
 	if cxh == nil {
 		tr.NotFoundHandlerFn().ServeHTTPC(ctx, w, r)
 		return

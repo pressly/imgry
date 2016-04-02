@@ -91,15 +91,16 @@ func (srv *Server) NewRouter() http.Handler {
 		panic(err)
 	}
 
-	r := chi.NewRouter()
+	r := chi.NewRouter(srv.Ctx)
 
-	r.Use(ParentContext(srv.Ctx))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Use(middleware.ThrottleBacklog(cf.Limits.MaxRequests, cf.Limits.BacklogSize, cf.Limits.BacklogTimeout))
+
+	// TODO: review CloseNotify ......
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
@@ -113,7 +114,7 @@ func (srv *Server) NewRouter() http.Handler {
 	}
 
 	if srv.Config.Profiler {
-		r.Mount("/debug", middleware.NoCache, Profiler())
+		r.Mount("/debug", middleware.Profiler())
 	}
 
 	r.Get("/", trackRoute("root"), func(w http.ResponseWriter, r *http.Request) {

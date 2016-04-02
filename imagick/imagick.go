@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gographics/imagick/imagick"
 	"github.com/pressly/imgry"
+	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
 var (

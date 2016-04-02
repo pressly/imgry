@@ -6,8 +6,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-func NewRouter() *Mux {
-	return NewMux()
+// Create a new mux that adheres to Router interface, with an optional
+// parent context to signal server context to all requests.
+func NewRouter(parent ...context.Context) *Mux {
+	return NewMux(parent...)
 }
 
 type Router interface {
@@ -58,9 +60,20 @@ func (h HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h(context.Background(), w, r)
 }
 
-func URLParams(ctx context.Context) map[string]string {
-	if urlParams, ok := ctx.Value(URLParamsCtxKey).(map[string]string); ok {
-		return urlParams
+// RouteContext returns chi's routing context object that holds url params
+// and a routing path for subrouters.
+func RouteContext(ctx context.Context) *Context {
+	rctx, _ := ctx.(*Context)
+	if rctx == nil {
+		rctx = ctx.Value(routeCtxKey).(*Context)
 	}
-	return nil
+	return rctx
+}
+
+// URLParam returns a url paramter from the routing context.
+func URLParam(ctx context.Context, key string) string {
+	if rctx := RouteContext(ctx); rctx != nil {
+		return rctx.Params.Get(key)
+	}
+	return ""
 }
