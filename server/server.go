@@ -100,8 +100,6 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Use(middleware.ThrottleBacklog(cf.Limits.MaxRequests, cf.Limits.BacklogSize, cf.Limits.BacklogTimeout))
 
-	// TODO: review CloseNotify ......
-
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
 	r.Use(httpcoala.Route("HEAD", "GET"))
