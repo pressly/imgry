@@ -1,7 +1,7 @@
 bind              = "0.0.0.0:4446"
 max_procs         = -1
 log_level         = "INFO"          # DEBUG > INFO > WARN > ERROR > FATAL > PANIC
-cache_max_age     = 14400           # 4 hours
+cache_max_age     = 691200          # 8 days
 tmp_dir           = "/tmp/imgry"    # inform image engine to use this directory for temp resources
 profiler          = false           # enabled /debug/pprof profiling endpoints
 

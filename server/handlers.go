@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
@@ -112,6 +113,7 @@ func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("X-Meta-Width", fmt.Sprintf("%d", im.Width))
 	w.Header().Set("X-Meta-Height", fmt.Sprintf("%d", im.Height))
 	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.CacheMaxAge))
+	w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
 
 	// If requested, only return the image details instead of the data
 	if r.URL.Query().Get("info") != "" {
