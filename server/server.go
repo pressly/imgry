@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/goware/cors"
 	"github.com/goware/heartbeat"
 	"github.com/goware/httpcoala"
 	"github.com/goware/lg"
@@ -12,7 +13,6 @@ import (
 	"github.com/pressly/consistentrd"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
-	"github.com/rs/cors"
 	"golang.org/x/net/context"
 )
 

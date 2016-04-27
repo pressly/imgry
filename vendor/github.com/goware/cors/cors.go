@@ -37,30 +37,38 @@ type Options struct {
 	// Only one wildcard can be used per origin.
 	// Default value is ["*"]
 	AllowedOrigins []string
+
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
 	// as argument and returns true if allowed or false otherwise. If this option is
 	// set, the content of AllowedOrigins is ignored.
 	AllowOriginFunc func(origin string) bool
+
 	// AllowedMethods is a list of methods the client is allowed to use with
 	// cross-domain requests. Default value is simple methods (GET and POST)
 	AllowedMethods []string
+
 	// AllowedHeaders is list of non simple headers the client is allowed to use with
 	// cross-domain requests.
 	// If the special "*" value is present in the list, all headers will be allowed.
 	// Default value is [] but "Origin" is always appended to the list.
 	AllowedHeaders []string
+
 	// ExposedHeaders indicates which headers are safe to expose to the API of a CORS
 	// API specification
 	ExposedHeaders []string
+
 	// AllowCredentials indicates whether the request can include user credentials like
 	// cookies, HTTP authentication or client side SSL certificates.
 	AllowCredentials bool
+
 	// MaxAge indicates how long (in seconds) the results of a preflight request
 	// can be cached
 	MaxAge int
+
 	// OptionsPassthrough instructs preflight to let other potential next handlers to
 	// process the OPTIONS method. Turn this on if your application handles OPTIONS.
 	OptionsPassthrough bool
+
 	// Debugging flag adds additional output to debug server side CORS issues
 	Debug bool
 }
@@ -69,20 +77,28 @@ type Options struct {
 type Cors struct {
 	// Debug logger
 	log *log.Logger
+
 	// Set to true when allowed origins contains a "*"
 	allowedOriginsAll bool
+
 	// Normalized list of plain allowed origins
 	allowedOrigins []string
+
 	// List of allowed origins containing wildcards
 	allowedWOrigins []wildcard
+
 	// Optional origin validator function
 	allowOriginFunc func(origin string) bool
+
 	// Set to true when allowed headers contains a "*"
 	allowedHeadersAll bool
+
 	// Normalized list of allowed headers
 	allowedHeaders []string
+
 	// Normalized list of allowed methods
 	allowedMethods []string
+
 	// Normalized list of exposed headers
 	exposedHeaders    []string
 	allowCredentials  bool
