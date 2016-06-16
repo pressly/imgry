@@ -71,7 +71,7 @@ func (r *Responder) cacheErrors(w http.ResponseWriter, err error) {
 	case imgry.ErrInvalidImageData, ErrInvalidURL:
 		// For invalid inputs, we tell the surrogate to cache the
 		// error for a small amount of time.
-		w.Header().Set("Surrogate-Control", "max-age=300") // 5 minutes
+		w.Header().Set("Cache-Control", "s-maxage=300") // 5 minutes
 	default:
 	}
 }
