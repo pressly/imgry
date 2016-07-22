@@ -22,9 +22,10 @@ scaled very well.
 * **Lightweight** - cloc'd in <1000 LOC for the chi router
 * **Fast** - yes, see [benchmarks](#benchmarks)
 * **Zero allocations** - no GC pressure during routing
-* **Designed for modular/composable APIs** - middlewares, inline middleware groups/chains, and subrouter mounting
-* **Context control** - built on `net/context` with value chaining, deadlines and timeouts
+* **Designed for modular/composable APIs** - middlewares, inline middlewares, route groups and subrouter mounting
+* **Context control** - built on new `context` package, providing value chaining, deadlines and timeouts
 * **Robust** - tested / used in production
+* **No external dependencies** - plain ol' Go 1.7+ stdlib
 
 ## Router design
 
@@ -33,58 +34,53 @@ Built on top of the tree is the `Router` interface:
 
 ```go
 // Register a middleware handler (or few) on the middleware stack
-Use(middlewares ...interface{})
+Use(middlewares ...func(http.Handler) http.Handler
 
-// Register a new middleware stack
-Group(fn func(r Router)) Router
-
-// Mount an inline sub-router
+// Mount a sub-router along a pattern
 Route(pattern string, fn func(r Router)) Router
 
+// Register a new inline-Mux, which offers a fresh middleware stack
+Group(fn func(r Router)) Router
+
 // Mount a sub-router
-Mount(pattern string, handlers ...interface{})
+Mount(pattern string, subrouter Router)
 
 // Register routing handler for all http methods
-Handle(pattern string, handlers ...interface{})
+Handle(pattern string, handler http.Handler)
+
+// Register routing handler func for all http methods
+HandleFunc(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for CONNECT http method
-Connect(pattern string, handlers ...interface{})
+Connect(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for HEAD http method
-Head(pattern string, handlers ...interface{})
+Head(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for GET http method
-Get(pattern string, handlers ...interface{})
+Get(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for POST http method
-Post(pattern string, handlers ...interface{})
+Post(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for PUT http method
-Put(pattern string, handlers ...interface{})
+Put(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for PATCH http method
-Patch(pattern string, handlers ...interface{})
+Patch(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for DELETE http method
-Delete(pattern string, handlers ...interface{})
+Delete(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for TRACE http method
-Trace(pattern string, handlers ...interface{})
+Trace(pattern string, handler http.HandlerFunc)
 
 // Register routing handler for OPTIONS http method
-Options(pattern string, handlers ...interface{})
+Options(pattern string, handler http.HandlerFunc)
 ```
 
 Each routing method accepts a URL `pattern` and chain of `handlers`. The URL pattern
 supports named params (ie. `/users/:userID`) and wildcards (ie. `/admin/*`).
-
-The `handlers` argument can be a single request handler, or a chain of middleware
-handlers, followed by a request handler. The request handler is required, and must
-be the last argument.
-
-We lose type checking of the handlers, but that'll be resolved sometime in the [future](#future),
-we hope, when Go's stdlib supports net/context in net/http. For now, chi checks the types
-at runtime and panics in case of a mismatch.
 
 The supported handlers are as follows..
 
@@ -92,21 +88,10 @@ The supported handlers are as follows..
 ### Middleware handlers
 
 ```go
-// Standard HTTP middleware. Compatible and friendly for when a request context isn't needed.
-func StdMiddleware(next http.Handler) http.Handler {
+// HTTP middleware.
+func Middleware(next http.Handler) http.Handler {
   return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     next.ServeHTTP(w, r)
-  })
-}
-```
-
-```go
-// net/context HTTP middleware. Useful for signaling to stop processing, adding a timeout,
-// cancellation, or passing data down the middleware chain.
-func CtxMiddleware(next chi.Handler) chi.Handler {
-  return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-    ctx = context.WithValue(ctx, "key", "value")
-    next.ServeHTTPC(ctx, w, r)
   })
 }
 ```
@@ -114,33 +99,35 @@ func CtxMiddleware(next chi.Handler) chi.Handler {
 ### Request handlers
 
 ```go
-// Standard HTTP handler
-func StdHandler(w http.ResponseWriter, r *http.Request) {
+// HTTP handler.
+func Handler(w http.ResponseWriter, r *http.Request) {
   w.Write([]byte("hi"))
 }
 ```
 
 ```go
-// net/context HTTP request handler
-func CtxHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-  userID := chi.URLParam(ctx, "userID") // from a route like /users/:userID
+// HTTP handler with use of request context.
+func CtxHandler(w http.ResponseWriter, r *http.Request) {
+  userID := chi.URLParam(r, "userID") // from a route like /users/:userID
+
+  ctx := r.Context()
   key := ctx.Value("key").(string)
+
   w.Write([]byte(fmt.Sprintf("hi %v, %v", userID, key)))
 }
 ```
 
-## net/context?
+## context?
 
-`net/context` is a tiny library written by [Sameer Ajmani](https://github.com/Sajmani) that provides
-a simple interface to signal context across call stacks and goroutines.
+`context` is a tiny pkg that provides simple interface to signal context across call stacks
+and goroutines. It was originally written by [Sameer Ajmani](https://github.com/Sajmani)
+and is available in stdlib since go1.7.
 
 Learn more at https://blog.golang.org/context
 
 and..
-* Docs: https://godoc.org/golang.org/x/net/context
-* Source: https://github.com/golang/net/tree/master/context
-* net/http client managed by context.Context: https://github.com/golang/net/tree/master/context/ctxhttp
-
+* Docs: https://tip.golang.org/pkg/context
+* Source: https://github.com/golang/go/tree/master/src/context
 
 ## Examples
 
@@ -153,9 +140,9 @@ Preview:
 ```go
 import (
   //...
+  "context"
   "github.com/pressly/chi"
   "github.com/pressly/chi/middleware"
-  "golang.org/x/net/context"
 )
 
 func main() {
@@ -181,11 +168,11 @@ func main() {
   })
 
   // RESTy routes for "articles" resource
-  r.Route("/articles", func(r chi.Router) {
+  r.Group("/articles", func(r chi.Router) {
     r.Get("/", paginate, listArticles)  // GET /articles
     r.Post("/", createArticle)          // POST /articles
 
-    r.Route("/:articleID", func(r chi.Router) {
+    r.Group("/:articleID", func(r chi.Router) {
       r.Use(ArticleCtx)
       r.Get("/", getArticle)            // GET /articles/123
       r.Put("/", updateArticle)         // PUT /articles/123
@@ -199,20 +186,21 @@ func main() {
   http.ListenAndServe(":3333", r)
 }
 
-func ArticleCtx(next chi.Handler) chi.Handler {
-  return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-    articleID := chi.URLParam(ctx, "articleID")
+func ArticleCtx(next http.Handler) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    articleID := chi.URLParam(r, "articleID")
     article, err := dbGetArticle(articleID)
     if err != nil {
       http.Error(w, http.StatusText(404), 404)
       return
     }
-    ctx = context.WithValue(ctx, "article", article)
-    next.ServeHTTPC(ctx, w, r)
+    ctx := context.WithValue(r.Context(), "article", article)
+    next.ServeHTTP(w, r.WithContext(ctx))
   })
 }
 
-func getArticle(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func getArticle(w http.ResponseWriter, r *http.Request) {
+  ctx := r.Context()
   article, ok := ctx.Value("article").(*Article)
   if !ok {
     http.Error(w, http.StatusText(422), 422)
@@ -230,14 +218,15 @@ func adminRouter() chi.Router {
   return r
 }
 
-func AdminOnly(next chi.Handler) chi.Handler {
-  return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func AdminOnly(next http.Handler) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    ctx := r.Context()
     perm, ok := ctx.Value("acl.permission").(YourPermissionType)
     if !ok || !perm.IsAdmin() {
       http.Error(w, http.StatusText(403), 403)
       return
     }
-    next.ServeHTTPC(ctx, w, r)
+    next.ServeHTTP(w, r)
   })
 }
 ```
@@ -316,7 +305,7 @@ We'll be more than happy to see [your contributions](./CONTRIBUTING.md)!
 
 ## License
 
-Copyright (c) 2015-2016 [Peter Kieltyka](https://github.com/pkieltyka)
+Copyright (c) 2015-present [Peter Kieltyka](https://github.com/pkieltyka)
 
 Licensed under [MIT License](./LICENSE)
 

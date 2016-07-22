@@ -6,22 +6,19 @@ import (
 	"time"
 
 	"github.com/goware/go-metrics"
-	"github.com/pressly/chi"
 	"github.com/tobi/airbrake-go"
-	"golang.org/x/net/context"
 )
 
 // Airbrake recoverer middleware to capture and report any panics to
 // airbrake.io.
-func AirbrakeRecoverer(apiKey string) func(chi.Handler) chi.Handler {
+func AirbrakeRecoverer(apiKey string) func(http.Handler) http.Handler {
 	airbrake.ApiKey = apiKey
-
-	return func(next chi.Handler) chi.Handler {
-		return chi.HandlerFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if apiKey != "" {
 				defer airbrake.CapturePanic(r)
 			}
-			next.ServeHTTPC(ctx, w, r)
+			next.ServeHTTP(w, r)
 		})
 	}
 }

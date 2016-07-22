@@ -13,7 +13,6 @@ import (
 	"github.com/pressly/consistentrd"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
-	"golang.org/x/net/context"
 )
 
 var (
@@ -27,14 +26,10 @@ type Server struct {
 	Chainstore  chainstore.Store
 	Fetcher     *Fetcher
 	ImageEngine imgry.Engine
-
-	Ctx        context.Context
-	CancelFunc context.CancelFunc
 }
 
 func New(conf *Config) *Server {
-	ctx, cancel := context.WithCancel(context.Background())
-	app = &Server{Ctx: ctx, CancelFunc: cancel, Config: conf}
+	app = &Server{Config: conf}
 	return app
 }
 
@@ -72,7 +67,6 @@ func (srv *Server) Configure() (err error) {
 // and finish up requests in progress.
 func (srv *Server) Close() {
 	lg.Info("closing server..")
-	srv.CancelFunc()
 }
 
 // Shutdown will release other resources and halt the server.
@@ -91,7 +85,7 @@ func (srv *Server) NewRouter() http.Handler {
 		panic(err)
 	}
 
-	r := chi.NewRouter(srv.Ctx)
+	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -115,12 +109,12 @@ func (srv *Server) NewRouter() http.Handler {
 		r.Mount("/debug", middleware.Profiler())
 	}
 
-	r.Get("/", trackRoute("root"), func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", chi.Use(trackRoute("root")).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("."))
-	})
+	}))
 
-	r.Get("/info", trackRoute("imageInfo"), GetImageInfo)
+	r.Get("/info", chi.Use(trackRoute("imageInfo")).HandlerFunc(GetImageInfo))
 
 	r.Route("/:bucket", func(r chi.Router) {
 		r.Post("/", BucketImageUpload)
@@ -136,20 +130,15 @@ func (srv *Server) NewRouter() http.Handler {
 			})
 			r.Use(cors.Handler)
 
-			r.Get("/", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketGetIndex)
-			r.Get("/fetch", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketFetchItem)
+			r.Get("/", chi.Use(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).HandlerFunc(BucketGetIndex))
+			r.Get("/fetch", chi.Use(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).HandlerFunc(BucketFetchItem))
 		})
 
 		// TODO: review
-		r.Get("/add", trackRoute("bucketAddItems"), BucketAddItems)
-		r.Get("/:key", conrd.Route(), BucketGetItem)
-		r.Delete("/:key", conrd.Route(), BucketDeleteItem)
+		r.Get("/add", chi.Use(trackRoute("bucketAddItems")).HandlerFunc(BucketAddItems))
+		r.Get("/:key", chi.Use(conrd.Route()).HandlerFunc(BucketGetItem))
+		r.Delete("/:key", chi.Use(conrd.Route()).HandlerFunc(BucketDeleteItem))
 	})
-
-	// DEPRECATED
-	r.Get("/fetch", trackRoute("bucketV0GetItem"), BucketV0FetchItem) // for Pressilla v2 apps
-	r.Get("/:bucket//fetch", conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem"), BucketFetchItem)
-	// --
 
 	return r
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/pressly/chi"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
-	"golang.org/x/net/context"
 )
 
 var (
@@ -30,16 +29,17 @@ var (
 	ErrInvalidURL = errors.New("invalid url")
 )
 
-func BucketGetIndex(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func BucketGetIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("url") == "" {
 		respond.Data(w, 200, []byte{})
 		return
 	}
-	BucketFetchItem(ctx, w, r)
+	BucketFetchItem(w, r)
 }
 
-func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
+func BucketFetchItem(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	bucket, err := NewBucket(chi.URLParamFromCtx(ctx, "bucket"))
 	if err != nil {
 		respond.ImageError(w, 422, err)
 		return
@@ -82,13 +82,14 @@ func BucketFetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	BucketGetItem(ctx, w, r)
+	BucketGetItem(w, r)
 }
 
-func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func BucketGetItem(w http.ResponseWriter, r *http.Request) {
 	// TODO: bucket binding should happen in a middleware... refactor all handlers
 	// that use it..
-	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
+	ctx := r.Context()
+	bucket, err := NewBucket(chi.URLParamFromCtx(ctx, "bucket"))
 	if err != nil {
 		lg.Errorf("Failed to create bucket for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
@@ -102,7 +103,7 @@ func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	im, err := bucket.GetImageSize(ctx, chi.URLParam(ctx, "key"), sizing)
+	im, err := bucket.GetImageSize(ctx, chi.URLParamFromCtx(ctx, "key"), sizing)
 	if err != nil {
 		lg.Errorf("Failed to get image for %s cause: %s", r.URL, err)
 		respond.ImageError(w, 422, err)
@@ -128,7 +129,8 @@ func BucketGetItem(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 // TODO: this can be optimized significantly..........
 // Ping / DecodeConfig ... do we have to use image magick.......?
-func GetImageInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func GetImageInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	url := r.URL.Query().Get("url")
 	if url == "" {
 		respond.ApiError(w, 422, errors.New("no image url"))
@@ -160,11 +162,13 @@ func GetImageInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 // Image upload to an s3 bucket, respond with a direct url to the uploaded
 // image. Avoid using respond.ApiError() here to prevent any of the responses
 // from being cached.
-func BucketImageUpload(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func BucketImageUpload(w http.ResponseWriter, r *http.Request) {
 	var url string
 	var err error
 	var data []byte
 	var im *Image
+
+	ctx := r.Context()
 
 	file, header, err := r.FormFile("file")
 	switch err {
@@ -214,7 +218,7 @@ func BucketImageUpload(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		app.Config.Chainstore.S3SecretKey,
 		app.Config.Chainstore.S3Bucket)
 
-	path := s3Path(chi.URLParam(ctx, "bucket"), im.Data, im.Format)
+	path := s3Path(chi.URLParamFromCtx(ctx, "bucket"), im.Data, im.Format)
 
 	url, err = s3Upload(s3Bucket, path, im)
 	if err != nil {
@@ -235,8 +239,9 @@ func BucketImageUpload(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	respond.JSON(w, 200, imfo)
 }
 
-func BucketAddItems(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
+func BucketAddItems(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	bucket, err := NewBucket(chi.URLParamFromCtx(ctx, "bucket"))
 	if err != nil {
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return
@@ -265,8 +270,10 @@ func BucketAddItems(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	respond.JSON(w, 200, images)
 }
 
-func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	bucket, err := NewBucket(chi.URLParam(ctx, "bucket"))
+func BucketDeleteItem(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	bucket, err := NewBucket(chi.URLParamFromCtx(ctx, "bucket"))
 	if err != nil {
 		respond.JSON(w, 422, map[string]interface{}{"error": err.Error()})
 		return
@@ -278,7 +285,7 @@ func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		rctx := chi.RouteContext(ctx)
 		rctx.Params.Set("key", pKey)
 	}
-	imageKey := chi.URLParam(ctx, "key")
+	imageKey := chi.URLParamFromCtx(ctx, "key")
 	if imageKey == "" {
 		respond.JSON(w, 422, map[string]interface{}{
 			"error": "Unable to determine the key for the delete operation",
@@ -293,11 +300,4 @@ func BucketDeleteItem(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	respond.JSON(w, 200, []byte{})
-}
-
-// DEPRECATED
-func BucketV0FetchItem(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	rctx := chi.RouteContext(ctx)
-	rctx.Params.Set("bucket", "tmp") // we imply the bucket name..
-	BucketFetchItem(ctx, w, r)
 }

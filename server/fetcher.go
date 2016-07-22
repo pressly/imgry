@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"io/ioutil"
@@ -13,7 +14,6 @@ import (
 	"github.com/goware/go-metrics"
 	"github.com/goware/lg"
 	"github.com/goware/urlx"
-	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
 )
 
