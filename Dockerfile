@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y build-essential
     zlib1g-dev pkg-config
 
 # Install libturbo-jpeg 1.5.0
-ADD https://sourceforge.net/projects/libjpeg-turbo/files/1.5.0/libjpeg-turbo-official_1.5.0_amd64.deb/download /tmp/libjpeg-turbo-official_1.4.2_amd64.deb
+ADD https://sourceforge.net/projects/libjpeg-turbo/files/1.5.0/libjpeg-turbo-official_1.5.0_amd64.deb/download /tmp/libjpeg-turbo-official_1.5.0_amd64.deb
 RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.5.0_amd64.deb && \
     echo /opt/libjpeg-turbo/lib64 > /etc/ld.so.conf.d/libjpeg-turbo.conf && ldconfig
 
