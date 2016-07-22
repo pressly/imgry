@@ -5,7 +5,7 @@ Imgry is an on-demand image delivery web service for responsive applications.
 
 ## Usage
 
-First install Go 1.4+ and copy the etc/imgry.conf.sample (the default is fine), then..
+First install Go 1.7+ and copy the etc/imgry.conf.sample (the default is fine), then..
 
 ```zsh
 cd imgry/
