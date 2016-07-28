@@ -1,5 +1,6 @@
 # Imgry
 ---
+version: 0.4
 
 env:
   NAME: imgry
@@ -13,8 +14,6 @@ env:
 
 networks:
   production:
-    env:
-      ENV: production
     hosts:
       - ubuntu@imgry1.x.pressly.io
       - ubuntu@imgry2.x.pressly.io
@@ -24,7 +23,7 @@ commands:
   config:
     desc: Upload/test config file.
     #upload:
-    #  - src: etc/imgry.$ENV.conf
+    #  - src: etc/imgry.$SUP_NETWORK.conf
     #    dst: /tmp/
     run: test -f $CONFIG
 
@@ -75,6 +74,7 @@ commands:
   restart:
     desc: Restart Docker container
     run: sudo docker restart $NAME || exit 0
+    serial: 1
 
   stop:
     desc: Stop Docker container
