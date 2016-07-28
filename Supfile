@@ -32,6 +32,10 @@ commands:
     desc: Print uname and current date/time.
     run: uname -a; date
 
+  w:
+    desc: Uptime/load
+    run: w | cat
+
   ps:
     desc: List running Docker containers
     run: sudo docker ps | grep $NAME
