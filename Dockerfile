@@ -1,4 +1,4 @@
-FROM golang:1.7rc2
+FROM golang:1.7
 
 # Dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y build-essential \
