@@ -109,12 +109,12 @@ func (srv *Server) NewRouter() http.Handler {
 		r.Mount("/debug", middleware.Profiler())
 	}
 
-	r.Get("/", chi.Use(trackRoute("root")).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.With(trackRoute("root")).Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("."))
-	}))
+	})
 
-	r.Get("/info", chi.Use(trackRoute("imageInfo")).HandlerFunc(GetImageInfo))
+	r.With(trackRoute("imageInfo")).Get("/info", GetImageInfo)
 
 	r.Route("/:bucket", func(r chi.Router) {
 		r.Post("/", BucketImageUpload)
@@ -130,14 +130,14 @@ func (srv *Server) NewRouter() http.Handler {
 			})
 			r.Use(cors.Handler)
 
-			r.Get("/", chi.Use(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).HandlerFunc(BucketGetIndex))
-			r.Get("/fetch", chi.Use(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).HandlerFunc(BucketFetchItem))
+			r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/", BucketGetIndex)
+			r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/fetch", BucketFetchItem)
 		})
 
 		// TODO: review
-		r.Get("/add", chi.Use(trackRoute("bucketAddItems")).HandlerFunc(BucketAddItems))
-		r.Get("/:key", chi.Use(conrd.Route()).HandlerFunc(BucketGetItem))
-		r.Delete("/:key", chi.Use(conrd.Route()).HandlerFunc(BucketDeleteItem))
+		r.With(trackRoute("bucketAddItems")).Get("/add", BucketAddItems)
+		r.With(conrd.Route()).Get("/:key", BucketGetItem)
+		r.With(conrd.Route()).Delete("/:key", BucketDeleteItem)
 	})
 
 	return r

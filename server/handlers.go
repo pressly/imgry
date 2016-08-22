@@ -61,7 +61,7 @@ func BucketFetchItem(w http.ResponseWriter, r *http.Request) {
 	imKey := sha1Hash(fetchUrl) // transform to what is expected..
 
 	rctx := chi.RouteContext(ctx)
-	rctx.Params.Set("key", imKey)
+	rctx.URLParams.Set("key", imKey)
 
 	// First check if we have the original.. a bit of extra overhead, but its okay
 	_, err = bucket.DbFindImage(ctx, imKey, nil)
@@ -283,7 +283,7 @@ func BucketDeleteItem(w http.ResponseWriter, r *http.Request) {
 	if pUrl != "" {
 		pKey := sha1Hash(pUrl) // transform to what is expected..
 		rctx := chi.RouteContext(ctx)
-		rctx.Params.Set("key", pKey)
+		rctx.URLParams.Set("key", pKey)
 	}
 	imageKey := chi.URLParamFromCtx(ctx, "key")
 	if imageKey == "" {

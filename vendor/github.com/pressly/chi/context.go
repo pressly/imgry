@@ -9,15 +9,11 @@ var (
 	RouteCtxKey = &contextKey{"RouteContext"}
 )
 
-var _ context.Context = &Context{}
-
-// A Context is the default routing context set on the root node of a
+// Context is the default routing context set on the root node of a
 // request context to track URL parameters and an optional routing path.
 type Context struct {
-	context.Context
-
-	// URL parameter key and values.
-	Params params
+	// URL routing parameter key and values.
+	URLParams params
 
 	// Routing path override used by subrouters.
 	RoutePath string
@@ -30,44 +26,37 @@ type Context struct {
 	RoutePatterns []string
 }
 
-// NewRouteContext returns a new routing context object.
+// NewRouteContext returns a new routing Context object.
 func NewRouteContext() *Context {
-	rctx := &Context{}
-	ctx := context.WithValue(context.Background(), RouteCtxKey, rctx)
-	rctx.Context = ctx
-	return rctx
+	return &Context{}
 }
 
 // reset a routing context to its initial state.
 func (x *Context) reset() {
-	x.Params = x.Params[:0]
+	x.URLParams = x.URLParams[:0]
 	x.RoutePath = ""
 	x.RoutePattern = ""
 	x.RoutePatterns = x.RoutePatterns[:0]
 }
 
-// RouteContext returns chi's routing context object that holds url params
-// and a routing path for subrouters.
+// RouteContext returns chi's routing Context object from a
+// http.Request Context.
 func RouteContext(ctx context.Context) *Context {
-	rctx, _ := ctx.(*Context)
-	if rctx == nil {
-		rctx = ctx.Value(RouteCtxKey).(*Context)
-	}
-	return rctx
+	return ctx.Value(RouteCtxKey).(*Context)
 }
 
-// URLParam returns the url parameter from an http.Request Context
+// URLParam returns the url parameter from a http.Request object.
 func URLParam(r *http.Request, key string) string {
 	if rctx := RouteContext(r.Context()); rctx != nil {
-		return rctx.Params.Get(key)
+		return rctx.URLParams.Get(key)
 	}
 	return ""
 }
 
-// URLParamFromCtx returns a url parameter from the routing context.
+// URLParam returns the url parameter from a http.Request Context.
 func URLParamFromCtx(ctx context.Context, key string) string {
 	if rctx := RouteContext(ctx); rctx != nil {
-		return rctx.Params.Get(key)
+		return rctx.URLParams.Get(key)
 	}
 	return ""
 }
@@ -114,4 +103,15 @@ func (ps *params) Del(key string) string {
 		}
 	}
 	return ""
+}
+
+// contextKey is a value for use with context.WithValue. It's used as
+// a pointer so it fits in an interface{} without allocation. This technique
+// for defining context keys was copied from Go 1.7's new use of context in net/http.
+type contextKey struct {
+	name string
+}
+
+func (k *contextKey) String() string {
+	return "chi context value " + k.name
 }
