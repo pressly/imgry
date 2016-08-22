@@ -9,4 +9,4 @@ sudo rm -rf bin
 # Build the resulting image. Tag it with version, then retag the latest.
 VERSION=$(scripts/version.sh --long)
 sudo docker build --rm -t $IMAGE:$VERSION .
-sudo docker tag -f $IMAGE:$VERSION $IMAGE:latest
+sudo docker tag $IMAGE:$VERSION $IMAGE:latest
