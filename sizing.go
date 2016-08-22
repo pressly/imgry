@@ -288,6 +288,8 @@ func (sz *Sizing) SetFromQuery(q string) error {
 				return err
 			}
 		}
+	} else {
+		sz.Quality = 0 // 0 is we don't adjust the quality, presuming 100%
 	}
 
 	// FocalPoint

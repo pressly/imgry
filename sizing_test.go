@@ -339,7 +339,7 @@ func TestIssue10Canvas(t *testing.T) {
 	sz.Granularity = 13
 
 	result := sz.ToQuery()
-	expected, err := url.ParseQuery("s=100x200&op=fitted&canvas=320x300&format=png&g=13")
+	expected, err := url.ParseQuery("s=100x200&op=fitted&canvas=320x300&format=png&g=13&q=75")
 	assert.Nil(t, err)
 	assert.Equal(t, expected, result)
 }
