@@ -21,6 +21,7 @@ var (
 	DefaultFetcherThroughput     = 100
 	DefaultFetcherReqNumAttempts = 2
 	// DefaultFetcherReqTimeout = 60 * time.Second
+	DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10; rv:33.0) Gecko/20100101 Firefox/33.0"
 )
 
 // TODO: get Throughput from app.Config.Limits.MaxFetchers
@@ -123,7 +124,15 @@ func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse,
 
 			lg.Infof("Fetching %s", url.String())
 
-			resp, err := ctxhttp.Get(ctx, f.client(), url.String())
+			req, err := http.NewRequest("GET", url.String(), nil)
+			if err != nil {
+				fetch.Err = err
+				return
+			}
+			req.Header.Set("User-Agent", DefaultUserAgent)
+			req.Header.Set("Accept", "*/*")
+
+			resp, err := ctxhttp.Do(ctx, f.client(), req)
 			if err != nil {
 				lg.Warnf("Error fetching %s because %s", url.String(), err)
 				fetch.Err = err
