@@ -3,7 +3,7 @@ package imgry
 import "errors"
 
 const (
-	VERSION = "0.40.0"
+	VERSION = "1.0.0"
 )
 
 var (
