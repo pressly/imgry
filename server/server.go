@@ -98,7 +98,7 @@ func (srv *Server) NewRouter() http.Handler {
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
 	r.Use(httpcoala.Route("HEAD", "GET"))
 
-	r.Use(heartbeat.Route("/ping"))
+	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(heartbeat.Route("/favicon.ico"))
 
 	if cf.Airbrake.ApiKey != "" {

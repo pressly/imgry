@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/pressly/imgry"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 var (
@@ -297,7 +297,8 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		// Resize the image
 		resizeRect, cropBox, cropOrigin := sz.CalcResizeRect(srcSize)
 		if resizeRect != nil && !resizeRect.Equal(imgry.ZeroRect) {
-			err := i.mw.ResizeImage(uint(resizeRect.Width), uint(resizeRect.Height), imagick.FILTER_LANCZOS, 1.0)
+
+			err := i.mw.ResizeImage(uint(resizeRect.Width), uint(resizeRect.Height), imagick.FILTER_LANCZOS)
 			if err != nil {
 				return err
 			}
@@ -321,7 +322,7 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 
 			x := (sz.Canvas.Width - int(i.mw.GetImageWidth())) / 2
 			y := (sz.Canvas.Height - int(i.mw.GetImageHeight())) / 2
-			canvas.CompositeImage(i.mw, imagick.COMPOSITE_OP_OVER, x, y)
+			canvas.CompositeImage(i.mw, imagick.COMPOSITE_OP_OVER, true, x, y)
 			canvas.ResetImagePage("")
 		}
 

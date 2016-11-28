@@ -13,7 +13,7 @@ func (mws Middlewares) Handler(h http.Handler) http.Handler {
 	return &ChainHandler{mws, h, chain(mws, h)}
 }
 
-// Handler builds and returns a http.Handler from the chain of middlewares,
+// HandlerFunc builds and returns a http.Handler from the chain of middlewares,
 // with `h http.Handler` as the final handler.
 func (mws Middlewares) HandlerFunc(h http.HandlerFunc) http.Handler {
 	return &ChainHandler{mws, h, chain(mws, h)}
@@ -33,7 +33,7 @@ func (c *ChainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // handler in the order they are passed.
 func chain(middlewares []func(http.Handler) http.Handler, endpoint http.Handler) http.Handler {
 	// Return ahead of time if there aren't any middlewares for the chain
-	if middlewares == nil || len(middlewares) == 0 {
+	if len(middlewares) == 0 {
 		return endpoint
 	}
 

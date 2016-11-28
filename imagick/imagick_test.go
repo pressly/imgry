@@ -5,9 +5,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/pressly/imgry"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadBlob(t *testing.T) {

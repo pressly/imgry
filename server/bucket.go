@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -9,7 +10,6 @@ import (
 	"github.com/goware/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
-	"golang.org/x/net/context"
 )
 
 var (

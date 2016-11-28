@@ -4,11 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"math"
 )
 
 var (

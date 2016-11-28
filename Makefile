@@ -19,7 +19,7 @@ all:
 ## Tools
 ##
 tools:
-	go get github.com/pkieltyka/fresh
+	go get github.com/pressly/fresh
 	go get -u github.com/kardianos/govendor
 
 
@@ -32,10 +32,10 @@ run:
 		cd ./cmd/imgry-server && fresh -w=../..)
 
 test:
-	@GOGC=off go test $$(GO15VENDOREXPERIMENT=1 go list ./... | grep -v '/vendor/')
+	@GOGC=off go test $$(go list ./... | grep -v '/vendor/')
 
 dist-test:
-	@GO15VENDOREXPERIMENT=1 $(MAKE) test
+	@$(MAKE) test
 
 
 
@@ -43,7 +43,7 @@ dist-test:
 ## Building
 ##
 dist: clean
-	GO15VENDOREXPERIMENT=1 $(MAKE) build
+	$(MAKE) build
 
 build:
 	@mkdir -p ./bin

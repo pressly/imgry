@@ -183,9 +183,13 @@ func (n *node) findPattern(pattern string) *node {
 			continue
 		}
 
-		xpattern := pattern[n.longestPrefix(pattern, n.prefix):]
+		idx := n.longestPrefix(pattern, n.prefix)
+		xpattern := pattern[idx:]
+
 		if len(xpattern) == 0 {
 			return n
+		} else if xpattern[0] == '/' && idx < len(n.prefix) {
+			continue
 		}
 
 		return n.findPattern(xpattern)
@@ -447,10 +451,10 @@ func (n *node) isEmpty() bool {
 	return true
 }
 
-func (t *node) routes() []Route {
+func (n *node) routes() []Route {
 	rts := []Route{}
 
-	t.walkRoutes(t.prefix, t, func(pattern string, handlers methodHandlers, subroutes Routes) bool {
+	n.walkRoutes(n.prefix, n, func(pattern string, handlers methodHandlers, subroutes Routes) bool {
 		if handlers[mSTUB] != nil && subroutes == nil {
 			return false
 		}
@@ -482,18 +486,18 @@ func (t *node) routes() []Route {
 	return rts
 }
 
-func (t *node) walkRoutes(pattern string, n *node, fn walkFn) bool {
-	pattern = n.pattern
+func (n *node) walkRoutes(pattern string, nd *node, fn walkFn) bool {
+	pattern = nd.pattern
 
 	// Visit the leaf values if any
-	if (n.handlers != nil || n.subroutes != nil) && fn(pattern, n.handlers, n.subroutes) {
+	if (nd.handlers != nil || nd.subroutes != nil) && fn(pattern, nd.handlers, nd.subroutes) {
 		return true
 	}
 
 	// Recurse on the children
-	for _, nds := range n.children {
-		for _, n := range nds {
-			if t.walkRoutes(pattern, n, fn) {
+	for _, nds := range nd.children {
+		for _, nd := range nds {
+			if n.walkRoutes(pattern, nd, fn) {
 				return true
 			}
 		}
