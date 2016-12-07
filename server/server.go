@@ -5,7 +5,6 @@ import (
 
 	"github.com/goware/cors"
 	"github.com/goware/heartbeat"
-	"github.com/goware/httpcoala"
 	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chi"
@@ -84,6 +83,7 @@ func (srv *Server) NewRouter() http.Handler {
 	if err != nil {
 		panic(err)
 	}
+	_ = conrd
 
 	r := chi.NewRouter()
 
@@ -96,7 +96,7 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
-	r.Use(httpcoala.Route("HEAD", "GET"))
+	// r.Use(httpcoala.Route("HEAD", "GET"))
 
 	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(heartbeat.Route("/favicon.ico"))
@@ -130,14 +130,19 @@ func (srv *Server) NewRouter() http.Handler {
 			})
 			r.Use(cors.Handler)
 
-			r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/", BucketGetIndex)
-			r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/fetch", BucketFetchItem)
+			// r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/", BucketGetIndex)
+			// r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/fetch", BucketFetchItem)
+			r.With(trackRoute("bucketV1GetItem")).Get("/", BucketGetIndex)
+			r.With(trackRoute("bucketV1GetItem")).Get("/fetch", BucketFetchItem)
+
 		})
 
 		// TODO: review
 		r.With(trackRoute("bucketAddItems")).Get("/add", BucketAddItems)
-		r.With(conrd.Route()).Get("/:key", BucketGetItem)
-		r.With(conrd.Route()).Delete("/:key", BucketDeleteItem)
+		// r.With(conrd.Route()).Get("/:key", BucketGetItem)
+		// r.With(conrd.Route()).Delete("/:key", BucketDeleteItem)
+		r.Get("/:key", BucketGetItem)
+		r.Delete("/:key", BucketDeleteItem)
 	})
 
 	return r
