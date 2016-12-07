@@ -78,7 +78,7 @@ func (db *DB) Set(key string, obj []byte, expireIn ...time.Duration) (err error)
 	}
 
 	if ex > 0 {
-		_, err = conn.Do("SETEX", key, obj, ex)
+		_, err = conn.Do("SETEX", key, ex, obj)
 	} else {
 		_, err = conn.Do("SET", key, obj)
 	}
