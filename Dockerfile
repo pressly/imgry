@@ -5,13 +5,13 @@ RUN apt-get update && apt-get install --no-install-recommends -y build-essential
     zlib1g-dev pkg-config
 
 # Install libturbo-jpeg 
-ADD https://sourceforge.net/projects/libjpeg-turbo/files/1.5.0/libjpeg-turbo-official_1.5.0_amd64.deb/download /tmp/libjpeg-turbo-official_1.5.0_amd64.deb
-RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.5.0_amd64.deb && \
+ADD https://sourceforge.net/projects/libjpeg-turbo/files/1.5.1/libjpeg-turbo-official_1.5.1_amd64.deb/download /tmp/libjpeg-turbo-official_1.5.1_amd64.deb
+RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.5.1_amd64.deb && \
     echo /opt/libjpeg-turbo/lib64 > /etc/ld.so.conf.d/libjpeg-turbo.conf && ldconfig
 
 # Install libpng 
-ADD https://downloads.sourceforge.net/project/libpng/libpng16/1.6.25/libpng-1.6.25.tar.gz /tmp/
-RUN cd /tmp && tar -zxvf libpng-1.6.25.tar.gz && cd libpng-1.6.25 && \
+ADD https://downloads.sourceforge.net/project/libpng/libpng16/1.6.26/libpng-1.6.26.tar.gz /tmp/
+RUN cd /tmp && tar -zxvf libpng-1.6.26.tar.gz && cd libpng-1.6.26 && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
 # Install ImageMagick
