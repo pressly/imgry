@@ -1,4 +1,4 @@
-FROM golang:1.7.3
+FROM golang:1.8.0
 
 # Dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y build-essential \
