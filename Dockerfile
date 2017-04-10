@@ -10,8 +10,8 @@ RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.5.1_amd64.deb && \
     echo /opt/libjpeg-turbo/lib64 > /etc/ld.so.conf.d/libjpeg-turbo.conf && ldconfig
 
 # Install libpng 
-ADD https://downloads.sourceforge.net/project/libpng/libpng16/1.6.26/libpng-1.6.26.tar.gz /tmp/
-RUN cd /tmp && tar -zxvf libpng-1.6.26.tar.gz && cd libpng-1.6.26 && \
+ADD https://downloads.sourceforge.net/project/libpng/libpng16/1.6.29/libpng-1.6.29.tar.gz /tmp/
+RUN cd /tmp && tar -zxvf libpng-1.6.29.tar.gz && cd libpng-1.6.29 && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
 # Install ImageMagick
