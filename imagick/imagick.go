@@ -297,7 +297,17 @@ func (i *Image) sizeFrames(sz *imgry.Sizing) error {
 		// Resize the image
 		resizeRect, cropBox, cropOrigin := sz.CalcResizeRect(srcSize)
 		if resizeRect != nil && !resizeRect.Equal(imgry.ZeroRect) {
-			err := i.mw.ResizeImage(uint(resizeRect.Width), uint(resizeRect.Height), imagick.FILTER_LANCZOS, 1.0)
+			var resizeFilter imagick.FilterType
+
+			if resizeRect.Width > sz.Size.Width {
+				// use Mitchell-Netravali cubic filter when enlarging
+				resizeFilter = imagick.FILTER_MITCHELL
+			} else {
+				// use sharp variant of 3-lobed cylindrical lanczos when shrinking
+				resizeFilter = imagick.FILTER_LANCZOS_SHARP
+			}
+
+			err := i.mw.ResizeImage(uint(resizeRect.Width), uint(resizeRect.Height), resizeFilter, 1.0)
 			if err != nil {
 				return err
 			}
