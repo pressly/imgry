@@ -1,7 +1,7 @@
 Imgry
 =====
 
-Imgry is an on-demand image delivery web service for responsive applications.
+Imgry :) is an on-demand image delivery web service for responsive applications.
 
 ## Usage
 
