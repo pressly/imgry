@@ -112,15 +112,25 @@ func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse,
 	for i, urlStr := range urls {
 		fetches[i] = &FetcherResponse{}
 
-		go func(fetch *FetcherResponse) {
+		go func(fetch *FetcherResponse, reqURL string) {
 			defer wg.Done()
 
-			url, err := urlx.Parse(urlStr)
+			u, err := urlx.Parse(reqURL)
 			if err != nil {
 				fetch.Err = err
 				return
 			}
-			fetch.URL = url
+
+			if headers, ok := app.Config.CustomParams[u.Host]; ok {
+				q := u.Query()
+				for key, vals := range headers {
+					for _, v := range vals {
+						q.Add(key, v)
+					}
+				}
+				u.RawQuery = q.Encode()
+			}
+			fetch.URL = u
 
 			lg.Infof("Fetching %s", url.String())
 
@@ -150,7 +160,7 @@ func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse,
 			fetch.Data = body
 			fetch.Err = nil
 
-		}(fetches[i])
+		}(fetches[i], urlStr)
 	}
 
 	wg.Wait()
