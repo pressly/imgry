@@ -10,13 +10,13 @@ RUN cd /tmp && dpkg -i /tmp/libjpeg-turbo-official_1.5.1_amd64.deb && \
     echo /opt/libjpeg-turbo/lib64 > /etc/ld.so.conf.d/libjpeg-turbo.conf && ldconfig
 
 # Install libpng 
-ADD https://downloads.sourceforge.net/project/libpng/libpng16/1.6.26/libpng-1.6.26.tar.gz /tmp/
-RUN cd /tmp && tar -zxvf libpng-1.6.26.tar.gz && cd libpng-1.6.26 && \
+ADD https://sourceforge.net/projects/libpng/files/libpng16/1.6.32/libpng-1.6.32.tar.gz/download /tmp/libpng-1.6.32.tar.gz
+RUN cd /tmp && tar -zxvf libpng-1.6.32.tar.gz && cd libpng-1.6.32 && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
 # Install ImageMagick v7
-ADD https://www.imagemagick.org/download/ImageMagick-7.0.3-9.tar.xz /tmp/
-RUN cd /tmp && tar -xvf ImageMagick-7.0.3-9.tar.xz && cd ImageMagick-7.0.3-9 && \
+ADD https://www.imagemagick.org/download/ImageMagick-7.0.6-10.tar.xz /tmp/
+RUN cd /tmp && tar -xvf ImageMagick-7.0.6-10.tar.xz && cd ImageMagick-7.0.6-10 && \
     ./configure --prefix=/usr \
                 --enable-shared \
                 --disable-openmp \
