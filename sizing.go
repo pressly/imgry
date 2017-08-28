@@ -37,7 +37,6 @@ func NewSizing() *Sizing {
 	sz := &Sizing{}
 	sz.Size = &Rect{}
 	sz.CropBox = &FloatingRect{&FloatPoint{}, &FloatPoint{}}
-	sz.FocalPoint = &FloatPoint{}
 	sz.Granularity = DefaultSizingGranularity
 	sz.Quality = 75
 	sz.Flatten = false
@@ -139,14 +138,14 @@ func (sz *Sizing) expandOp(srcSize *Rect) (*Rect, *Rect, *image.Point) {
 }
 
 func (sz *Sizing) coverOp(srcSize *Rect) (*Rect, *Rect, *image.Point) {
-	if sz.FocalPoint.Equal(ZeroFloatPoint) {
+	if sz.FocalPoint == nil {
 		sz.FocalPoint = NewFloatPoint(0.5, 0.5)
 	}
 	return sz.cropByOffset(srcSize)
 }
 
 func (sz *Sizing) balanceOp(srcSize *Rect) (*Rect, *Rect, *image.Point) {
-	if sz.FocalPoint.Equal(ZeroFloatPoint) {
+	if sz.FocalPoint == nil {
 		sz.FocalPoint = NewFloatPoint(0.5, 0.33)
 	}
 	return sz.cropByOffset(srcSize)
@@ -156,12 +155,15 @@ func (sz *Sizing) cropByOffset(srcSize *Rect) (*Rect, *Rect, *image.Point) {
 	rr := sz.calcScaledSize(srcSize, false)
 	if rr.AspectRatio() < srcSize.AspectRatio() {
 		return sz.cropByHeight(srcSize)
-	} else {
-		return sz.cropByWidth(srcSize)
 	}
+	return sz.cropByWidth(srcSize)
 }
 
 func (sz *Sizing) cropByWidth(srcSize *Rect) (*Rect, *Rect, *image.Point) {
+	if sz.FocalPoint == nil {
+		sz.FocalPoint = NewFloatPoint(0.5, 0.5)
+	}
+
 	rr := sz.scaleToWidth(srcSize)
 	diffY := float64(rr.Height)*sz.FocalPoint.Y - float64(sz.Size.Height)*0.5
 	if diffY < 0 {
@@ -173,6 +175,10 @@ func (sz *Sizing) cropByWidth(srcSize *Rect) (*Rect, *Rect, *image.Point) {
 }
 
 func (sz *Sizing) cropByHeight(srcSize *Rect) (*Rect, *Rect, *image.Point) {
+	if sz.FocalPoint == nil {
+		sz.FocalPoint = NewFloatPoint(0.5, 0.5)
+	}
+
 	rr := sz.scaleToHeight(srcSize)
 	diffX := float64(rr.Width)*sz.FocalPoint.X - float64(sz.Size.Width)*0.5
 	if diffX < 0 {
@@ -194,12 +200,10 @@ func (sz *Sizing) calcScaledSize(srcSize *Rect, scaleOrNot bool) *Rect {
 	if scaleOrNot {
 		if sz.Size.AspectRatio() > srcSize.AspectRatio() {
 			return sz.scaleToHeight(srcSize)
-		} else {
-			return sz.scaleToWidth(srcSize)
 		}
-	} else {
-		return sz.GranularizedSize()
+		return sz.scaleToWidth(srcSize)
 	}
+	return sz.GranularizedSize()
 }
 
 // Returns a granularized width and a height scaled to the same ratio as original size
@@ -353,7 +357,7 @@ func (sz *Sizing) ToQuery() url.Values {
 	if sz.Quality != 0 {
 		u.Add("q", strconv.Itoa(sz.Quality))
 	}
-	if !sz.FocalPoint.Equal(ZeroFloatPoint) {
+	if sz.FocalPoint != nil {
 		u.Add("fp", sz.FocalPoint.ToString())
 	}
 	if !sz.CropBox.Equal(ZeroFloatingRect) {
@@ -481,7 +485,7 @@ func NewFloatPoint(x, y float64) *FloatPoint {
 
 func NewFloatPointFromQuery(q string) (*FloatPoint, error) {
 	if q == "" {
-		return NewFloatPoint(0, 0), nil
+		return nil, nil
 	}
 
 	xy := strings.Split(q, ",")
