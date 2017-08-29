@@ -140,8 +140,6 @@ func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Siz
 	}
 
 	err = b.DbSaveImage(ctx, im2, sizing)
-	if err != nil {
-	}
 	return im2, err
 }
 
