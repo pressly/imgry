@@ -122,7 +122,7 @@ func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse,
 			uCopy := *u
 			fetch.URL = &uCopy
 
-			if params, ok := app.Config.CustomParams[u.Host]; ok {
+			if params, ok := app.Config.HostExtraQueryParams[u.Host]; ok {
 				q := u.Query()
 				for key, vals := range params {
 					for _, v := range vals {

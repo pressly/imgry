@@ -5,7 +5,7 @@ cache_max_age     = 691200          # 8 days
 tmp_dir           = "/tmp/imgry"    # inform image engine to use this directory for temp resources
 profiler          = false           # enabled /debug/pprof profiling endpoints
 
-[custom_params."example.com"]
+[host_extra_query_params."example.com"]
 jwt = ["my-jwt-token"]
 
 [cluster]
