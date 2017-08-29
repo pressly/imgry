@@ -6,7 +6,7 @@ tmp_dir           = "/tmp/imgry"    # inform image engine to use this directory 
 profiler          = false           # enabled /debug/pprof profiling endpoints
 
 [custom_params."example.com"]
-jwt = "my-jwt-token"
+jwt = ["my-jwt-token"]
 
 [cluster]
 local_node        = "http://127.0.0.1:4446"
