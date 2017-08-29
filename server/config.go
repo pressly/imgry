@@ -52,7 +52,7 @@ type Config struct {
 		MaxImageSizers int `toml:"max_image_sizers"`
 	} `toml:"limits"`
 
-	CustomParams map[string]url.Values `toml:"custom_headers"`
+	CustomParams map[string]url.Values `toml:"custom_params"`
 
 	// [db]
 	DB struct {
