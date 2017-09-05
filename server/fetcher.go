@@ -108,23 +108,33 @@ func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse,
 	wg.Add(len(urls))
 
 	// TODO: add thruput here..
-
 	for i, urlStr := range urls {
 		fetches[i] = &FetcherResponse{}
 
-		go func(fetch *FetcherResponse) {
+		go func(fetch *FetcherResponse, reqURL string) {
 			defer wg.Done()
 
-			url, err := urlx.Parse(urlStr)
+			u, err := urlx.Parse(reqURL)
 			if err != nil {
 				fetch.Err = err
 				return
 			}
-			fetch.URL = url
+			uCopy := *u
+			fetch.URL = &uCopy
 
-			lg.Infof("Fetching %s", url.String())
+			if params, ok := app.Config.HostExtraQueryParams[u.Host]; ok {
+				q := u.Query()
+				for key, vals := range params {
+					for _, v := range vals {
+						q.Add(key, v)
+					}
+				}
+				u.RawQuery = q.Encode()
+			}
 
-			req, err := http.NewRequest("GET", url.String(), nil)
+			lg.Infof("Fetching %s", uCopy.String())
+
+			req, err := http.NewRequest("GET", u.String(), nil)
 			if err != nil {
 				fetch.Err = err
 				return
@@ -134,7 +144,7 @@ func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse,
 
 			resp, err := ctxhttp.Do(ctx, f.client(), req)
 			if err != nil {
-				lg.Warnf("Error fetching %s because %s", url.String(), err)
+				lg.Warnf("Error fetching %s because %s", uCopy.String(), err)
 				fetch.Err = err
 				return
 			}
@@ -150,7 +160,7 @@ func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse,
 			fetch.Data = body
 			fetch.Err = nil
 
-		}(fetches[i])
+		}(fetches[i], urlStr)
 	}
 
 	wg.Wait()

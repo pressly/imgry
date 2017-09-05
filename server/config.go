@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -50,6 +51,8 @@ type Config struct {
 		MaxFetchers    int `toml:"max_fetchers"`
 		MaxImageSizers int `toml:"max_image_sizers"`
 	} `toml:"limits"`
+
+	HostExtraQueryParams map[string]url.Values `toml:"host_extra_query_params"`
 
 	// [db]
 	DB struct {
