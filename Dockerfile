@@ -15,8 +15,8 @@ RUN cd /tmp && tar -zxvf libpng-1.6.32.tar.gz && cd libpng-1.6.32 && \
     ./configure --prefix=/usr && make && make install && ldconfig
 
 # Install ImageMagick v7
-ADD https://www.imagemagick.org/download/ImageMagick-7.0.6-10.tar.xz /tmp/
-RUN cd /tmp && tar -xvf ImageMagick-7.0.6-10.tar.xz && cd ImageMagick-7.0.6-10 && \
+ADD https://www.imagemagick.org/download/ImageMagick-7.0.7-0.tar.xz /tmp/
+RUN cd /tmp && tar -xvf ImageMagick-7.0.7-0.tar.xz && cd ImageMagick-7.0.7-0 && \
     ./configure --prefix=/usr \
                 --enable-shared \
                 --disable-openmp \
