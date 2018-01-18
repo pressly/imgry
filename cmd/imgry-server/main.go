@@ -40,7 +40,11 @@ func main() {
 	graceful.PreHook(srv.Close)
 	graceful.PostHook(srv.Shutdown)
 
-	err = graceful.ListenAndServe(srv.Config.Bind, srv.NewRouter())
+	if srv.Config.SSL.Cert != "" && srv.Config.SSL.Key != "" {
+		err = graceful.ListenAndServeTLS(srv.Config.Bind, srv.Config.SSL.Cert, srv.Config.SSL.Key, srv.NewRouter())
+	} else {
+		err = graceful.ListenAndServe(srv.Config.Bind, srv.NewRouter())
+	}
 	if err != nil {
 		lg.Fatal(err.Error())
 	}

@@ -39,3 +39,7 @@ s3_secret_key     = ""
 enabled           = true
 address           = "127.0.0.1:8125"
 service_name      = "imgry"
+
+[ssl]
+cert              = "/etc/certs/server-cert.pem" 
+key               = "/etc/certs/server-key.pem"
