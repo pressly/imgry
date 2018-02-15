@@ -80,6 +80,12 @@ type Config struct {
 		Address     string `toml:"address"`
 		ServiceName string `toml:"service_name"`
 	}
+
+	// [ssl]
+	SSL struct {
+		Cert string `toml:"cert"`
+		Key  string `toml:"key"`
+	} `toml:"ssl"`
 }
 
 var (
