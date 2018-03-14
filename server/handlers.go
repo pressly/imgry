@@ -145,18 +145,18 @@ func GetImageInfo(w http.ResponseWriter, r *http.Request) {
 	data := response.Data
 
 	ng := imagick.Engine{}
-	imfo, err := ng.GetImageInfo(data)
+	info, err := ng.GetImageInfo(data)
 	if err != nil {
 		respond.ApiError(w, 422, err)
 		return
 	}
-	imfo.URL = response.URL.String()
-	imfo.Mimetype = MimeTypes[imfo.Format]
+	info.URL = response.URL.String()
+	info.Mimetype = MimeTypes[info.Format]
 
-	w.Header().Set("X-Meta-Width", fmt.Sprintf("%d", imfo.Width))
-	w.Header().Set("X-Meta-Height", fmt.Sprintf("%d", imfo.Height))
+	w.Header().Set("X-Meta-Width", fmt.Sprintf("%d", info.Width))
+	w.Header().Set("X-Meta-Height", fmt.Sprintf("%d", info.Height))
 	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.CacheMaxAge))
-	respond.JSON(w, 200, imfo)
+	respond.JSON(w, 200, info)
 }
 
 // Image upload to an s3 bucket, respond with a direct url to the uploaded
@@ -226,7 +226,7 @@ func BucketImageUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	imfo := imgry.ImageInfo{
+	info := imgry.ImageInfo{
 		URL:           url,
 		Format:        im.Format,
 		Mimetype:      im.MimeType(),
@@ -236,7 +236,7 @@ func BucketImageUpload(w http.ResponseWriter, r *http.Request) {
 		ContentLength: len(im.Data),
 	}
 
-	respond.JSON(w, 200, imfo)
+	respond.JSON(w, 200, info)
 }
 
 func BucketAddItems(w http.ResponseWriter, r *http.Request) {
