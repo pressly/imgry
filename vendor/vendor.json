@@ -226,12 +226,6 @@
 			"revisionTime": "2016-10-25T15:14:09Z"
 		},
 		{
-			"checksumSHA1": "j/hmhyTEBJZKLsUej1k5gFqj/lo=",
-			"path": "github.com/goware/go-metrics",
-			"revision": "edf8eefa94325c6af825e65c4150504b2267ae51",
-			"revisionTime": "2015-12-01T02:35:31Z"
-		},
-		{
 			"checksumSHA1": "cSGGKjbgQHueBAqBfR4HCd1NLs8=",
 			"path": "github.com/goware/heartbeat",
 			"revision": "602f8b16cd86f4f3f64efbcc3e11d6ac6db763e3",

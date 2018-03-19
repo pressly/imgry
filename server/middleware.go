@@ -3,9 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"time"
 
-	"github.com/goware/go-metrics"
 	"github.com/tobi/airbrake-go"
 )
 
@@ -43,14 +41,8 @@ func trackRoute(metricID string) func(http.Handler) http.Handler {
 		errRoute := fmt.Sprintf("%s-err", route)
 
 		handler := func(w http.ResponseWriter, r *http.Request) {
-			defer metrics.MeasureSince([]string{route}, time.Now())
-
 			lw := &wrappedResponseWriter{w, -1}
 			next.ServeHTTP(lw, r)
-
-			if lw.Status() >= 400 {
-				metrics.IncrCounter([]string{errRoute}, 1)
-			}
 		}
 		return http.HandlerFunc(handler)
 	}

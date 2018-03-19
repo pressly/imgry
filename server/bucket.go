@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"time"
 
-	"github.com/goware/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/imgry"
 )
@@ -109,8 +107,6 @@ func (b *Bucket) AddImage(ctx context.Context, i *Image) (err error) {
 }
 
 func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Sizing) (*Image, error) {
-	defer metrics.MeasureSince([]string{"fn.bucket.GetImageSize"}, time.Now())
-
 	// Find the original image
 	origIm, err := b.DbFindImage(ctx, key, nil)
 	if err != nil {
@@ -145,14 +141,13 @@ func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Siz
 
 // Loads the image from our table+data store with optional sizing
 func (b *Bucket) DbFindImage(ctx context.Context, key string, optSizing ...*imgry.Sizing) (*Image, error) {
-	defer metrics.MeasureSince([]string{"fn.bucket.DbFindImage"}, time.Now())
-
 	var sizing *imgry.Sizing
 	if len(optSizing) > 0 { // sizing is optional
 		sizing = optSizing[0]
 	}
 
 	idxKey := b.DbIndexKey(key, sizing)
+	legacyKey := b.LegacyDbIndexKey(key, sizing)
 
 	im := &Image{}
 	err := app.DB.HGet(idxKey, im)
@@ -160,6 +155,10 @@ func (b *Bucket) DbFindImage(ctx context.Context, key string, optSizing ...*imgr
 		return nil, err
 	}
 	if im.Key == "" {
+		err = app.DB.HGet(legacyKey, im)
+		if err != nil {
+			return nil, err
+		}
 		return nil, ErrImageNotFound
 	}
 
@@ -178,8 +177,6 @@ func (b *Bucket) DbFindImage(ctx context.Context, key string, optSizing ...*imgr
 
 // Persists the image blob in our data store
 func (b *Bucket) DbSaveImage(ctx context.Context, im *Image, sizing *imgry.Sizing) (err error) {
-	defer metrics.MeasureSince([]string{"fn.bucket.DbSaveImage"}, time.Now())
-
 	if err := im.ValidateKey(); err != nil {
 		return err
 	}
@@ -207,6 +204,28 @@ func (b *Bucket) DbDelImage(ctx context.Context, key string) (err error) {
 	err = app.Chainstore.Del(context.Background(), idxKey) // + "*") // TODO
 	// err = app.Chainstore.Del(idxKey)
 	return
+}
+
+func (b *Bucket) DbIndexKey(imageKey string, optSizing ...*imgry.Sizing) string {
+	prefix := imageKey
+	if len(imageKey) >= 3 {
+		prefix = imageKey[0:3]
+	}
+
+	key := fmt.Sprintf("%s/%s/%s", b.ID, prefix, imageKey)
+	if b.ID == "" {
+		key = fmt.Sprintf("%s/%s", prefix, imageKey)
+	}
+
+	var sizing *imgry.Sizing
+	if len(optSizing) > 0 { // sizing is optional
+		sizing = optSizing[0]
+	}
+
+	if sizing != nil {
+		key = fmt.Sprintf("%s:q/%s", key, sha1Hash(sizing.ToQuery().Encode()))
+	}
+	return key
 }
 
 func (b *Bucket) DbIndexKey(imageKey string, optSizing ...*imgry.Sizing) string {

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/goware/go-metrics"
 	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chainstore/boltstore"
@@ -72,13 +71,6 @@ type Config struct {
 		S3AccessKey   string `toml:"s3_access_key"`
 		S3SecretKey   string `toml:"s3_secret_key"`
 	} `toml:"chainstore"`
-
-	// [statsd]
-	StatsD struct {
-		Enabled     bool   `toml:"enabled"`
-		Address     string `toml:"address"`
-		ServiceName string `toml:"service_name"`
-	}
 
 	// [ssl]
 	SSL struct {
@@ -228,28 +220,4 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 		return nil, err
 	}
 	return store, nil
-}
-
-func (cf *Config) SetupStatsD() error {
-	if cf.StatsD.Enabled {
-		sink, err := metrics.NewStatsdSink(cf.StatsD.Address)
-		if err != nil {
-			return err
-		}
-
-		config := &metrics.Config{
-			ServiceName:          cf.StatsD.ServiceName, // Client service name
-			HostName:             "",
-			EnableHostname:       false,            // Enable hostname prefix
-			EnableRuntimeMetrics: true,             // Enable runtime profiling
-			EnableTypePrefix:     false,            // Disable type prefix
-			TimerGranularity:     time.Millisecond, // Timers are in milliseconds
-			ProfileInterval:      time.Second * 60, // Poll runtime every minute
-		}
-
-		config.HostName, _ = os.Hostname()
-
-		metrics.NewGlobal(config, sink)
-	}
-	return nil
 }
