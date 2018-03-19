@@ -1,16 +1,26 @@
 package s3store
 
 import (
-	"net/http"
+	"context"
 
-	"github.com/mitchellh/goamz/aws"
-	"github.com/mitchellh/goamz/s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/pressly/chainstore"
-	"golang.org/x/net/context"
 )
 
+type Config struct {
+	S3Bucket    string
+	S3AccessKey string
+	S3SecretKey string
+	S3Region    string
+	KMSKeyID    string
+}
+
 type s3Store struct {
-	BucketID, AccessKey, SecretKey string
+	conf Config
 
 	conn   *s3.S3
 	bucket *s3.Bucket
@@ -18,66 +28,75 @@ type s3Store struct {
 }
 
 // New returns a S3 based store.
-func New(bucketID string, accessKey string, secretKey string) chainstore.Store {
-	return &s3Store{BucketID: bucketID, AccessKey: accessKey, SecretKey: secretKey}
+func New(conf Config) chainstore.Store {
+	return &s3Store{conf: conf}
 }
 
-func (s *s3Store) Open() (err error) {
-	if s.opened {
-		return
+func (s *s3Store) Open() error {
+	cfg := &aws.Config{
+		Region: &s.conf.S3Region,
+	}
+	session := session.New(cfg)
+
+	if s.conf.S3AccessKey != "" {
+		session.Config.WithCredentials(credentials.NewStaticCredentials(s.conf.S3AccessKey, s.conf.S3SecretKey, ""))
+	} else {
+		session.Config.WithCredentials(ec2rolecreds.NewCredentials(session))
 	}
 
-	auth, err := aws.GetAuth(s.AccessKey, s.SecretKey)
-	if err != nil {
-		return
-	}
+	s.conn = s3.New(session)
 
-	s.conn = s3.New(auth, aws.USEast) // TODO: hardcoded region..?
-	s.conn.HTTPClient = func() *http.Client {
-		c := &http.Client{}
-		return c
-	}
-	s.bucket = s.conn.Bucket(s.BucketID)
-	s.opened = true
-	return
+	return nil
 }
 
 func (s *s3Store) Close() (err error) {
-	s.opened = false
-	return // TODO: .. nothing to do here..?
+	return
 }
 
 func (s *s3Store) Put(ctx context.Context, key string, val []byte) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		// TODO: configurable options for acl when making new s3 store
-		return s.bucket.Put(key, val, `application/octet-stream`, s3.PublicRead)
+	params := &s3.PutObjectInput{
+		Bucket:      aws.String(s.conf.S3Bucket),
+		Key:         aws.String(key),
+		ACL:         aws.String("private"),
+		ContentType: aws.String(`application/octet-stream`),
+		Body:        newReadSeeker(val),
 	}
+
+	if s.conf.KMSKeyID != "" {
+		params.SetSSEKMSKeyId(s.conf.KMSKeyID)
+		params.SetServerSideEncryption(s3.ServerSideEncryptionAwsKms)
+	}
+
+	_, err := s.conn.PutObjectWithContext(aws.Context(ctx), params)
+	return err
 }
 
-func (s *s3Store) Get(ctx context.Context, key string) (val []byte, err error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-		val, err = s.bucket.Get(key)
-		if err != nil {
-			s3err, ok := err.(*s3.Error)
-			if ok && s3err.Code != "NoSuchKey" {
-				return nil, err
-			}
-		}
-		return val, nil
+func (s *s3Store) Get(ctx context.Context, key string) ([]byte, error) {
+	params := &s3.GetObjectInput{
+		Bucket: aws.String(s.conf.S3Bucket),
+		Key:    aws.String(key),
 	}
+
+	resp, err := s.conn.GetObjectWithContext(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var val []byte
+	_, err = resp.Body.Read(val)
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
 }
 
 func (s *s3Store) Del(ctx context.Context, key string) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		return s.bucket.Del(key)
+	params := s3.DeleteObjectInput{
+		Bucket: aws.String(s.conf.S3Bucket),
+		Key:    aws.String(key),
 	}
+
+	_, err := s.conn.DeleteObjectWithContext(ctx, &params)
+	return err
 }
