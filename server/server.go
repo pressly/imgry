@@ -114,7 +114,7 @@ func (srv *Server) NewRouter() http.Handler {
 	r.Get("/", Index)
 	r.Get("/info", GetImageInfo)
 
-	r.Route("/:bucket", func(r chi.Router) {
+	r.Route("/{bucket}", func(r chi.Router) {
 		r.Use(BucketURLCtx)
 
 		r.Post("/", BucketImageUpload)
@@ -135,8 +135,8 @@ func (srv *Server) NewRouter() http.Handler {
 			r.Get("/fetch", BucketFetchItem)
 		})
 
-		r.Get("/:key", BucketGetItem)
-		r.Delete("/:key", BucketDeleteItem)
+		r.Get("/{key}", BucketGetItem)
+		r.Delete("/{key}", BucketDeleteItem)
 	})
 
 	return r

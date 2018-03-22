@@ -112,7 +112,7 @@
   branch = "v2"
   name = "github.com/pressly/chainstore"
   packages = [".","boltstore","lrumgr","memstore","s3store"]
-  revision = "6a37422f5e96075a0f4936d1b06c2116377d34e0"
+  revision = "7182a3497a907088e3ddf8e02c3758d4f4c44f00"
 
 [[projects]]
   name = "github.com/pressly/chi"

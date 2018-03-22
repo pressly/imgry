@@ -1,7 +1,9 @@
 package s3store
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -59,7 +61,7 @@ func (s *s3Store) Put(ctx context.Context, key string, val []byte) error {
 		Key:         aws.String(key),
 		ACL:         aws.String("private"),
 		ContentType: aws.String(`application/octet-stream`),
-		Body:        newReadSeeker(val),
+		Body:        bytes.NewReader(val),
 	}
 
 	if s.conf.KMSKeyID != "" {
@@ -77,13 +79,12 @@ func (s *s3Store) Get(ctx context.Context, key string) ([]byte, error) {
 		Key:    aws.String(key),
 	}
 
-	resp, err := s.conn.GetObjectWithContext(ctx, params)
+	resp, err := s.conn.GetObjectWithContext(aws.Context(ctx), params)
 	if err != nil {
 		return nil, err
 	}
 
-	var val []byte
-	_, err = resp.Body.Read(val)
+	val, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +98,6 @@ func (s *s3Store) Del(ctx context.Context, key string) error {
 		Key:    aws.String(key),
 	}
 
-	_, err := s.conn.DeleteObjectWithContext(ctx, &params)
+	_, err := s.conn.DeleteObjectWithContext(aws.Context(ctx), &params)
 	return err
 }

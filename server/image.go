@@ -2,6 +2,8 @@ package server
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -35,16 +37,27 @@ type Image struct {
 
 func (im *Image) genKey() {
 	if im.SrcURL != "" {
-		im.Key = fmt.Sprintf("%x", sha1.Sum([]byte(im.SrcURL)))
+		im.Key = sha1hash([]byte(im.SrcURL))
 		return
 	}
 
 	if len(im.Data) > 0 {
-		im.Key = fmt.Sprintf("%x", sha1.Sum(im.Data))
+		im.Key = sha1hash(im.Data)
 		return
 	}
 
 	im.Key = EmptyImageKey
+}
+
+func sha1hash(in []byte) string {
+	sum := sha1.Sum(in)
+	return base64.RawURLEncoding.EncodeToString(sum[0:])
+}
+
+func brokenSha1hash(in string) string {
+	hasher := sha1.New()
+	fmt.Fprintf(hasher, in)
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 // Make sure to call Release() if methods LoadImage(), SizeIt()

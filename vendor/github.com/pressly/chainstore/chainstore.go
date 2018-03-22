@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	keyInvalidator = regexp.MustCompile(`(i?)[^a-z0-9\/_\-:\.]`)
+	keyInvalidator = regexp.MustCompile(`[^a-zA-Z0-9\/_\-:\.]`)
 )
 
 const (

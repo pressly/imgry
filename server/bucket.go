@@ -2,9 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
@@ -61,6 +58,7 @@ func (b *Bucket) AddImagesFromUrls(ctx context.Context, urls []string) ([]*Image
 			lg.Errorf("LoadBlob data for %s returned error: %s", r.URL.String(), err)
 			continue
 		}
+
 		if err := b.AddImage(ctx, im); err != nil {
 			return images, err
 		}
@@ -75,7 +73,6 @@ func (b *Bucket) AddImage(ctx context.Context, im *Image) error {
 	if !im.IsValidImage() {
 		return imgry.ErrInvalidImageData
 	}
-	im.genKey()
 
 	// Save original size
 	return b.DbSaveImage(ctx, im, nil)
@@ -131,16 +128,19 @@ func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Siz
 }
 
 // Loads the image from our table+data store with optional sizing
-func (b *Bucket) DbFindImage(ctx context.Context, key string, sizing *imgry.Sizing) (*Image, error) {
+func (b *Bucket) DbFindImage(ctx context.Context, fetchKey string, sizing *imgry.Sizing) (*Image, error) {
 	im := &Image{}
 
+	key := sha1hash([]byte(fetchKey))
 	idxKey := b.DbIndexKey(key, sizing)
 
 	err := app.DB.HGet(idxKey, im)
 	if err != nil {
 		return nil, err
+
 	}
 	if im.Key == "" {
+		key = brokenSha1hash(fetchKey)
 		idxKey = b.LegacyDbIndexKey(key, sizing)
 		err = app.DB.HGet(idxKey, im)
 		if err != nil {
@@ -150,7 +150,6 @@ func (b *Bucket) DbFindImage(ctx context.Context, key string, sizing *imgry.Sizi
 			return nil, ErrImageNotFound
 		}
 	}
-
 	data, err := app.Chainstore.Get(ctx, idxKey) // TODO
 	// data, err := app.Chainstore.Get(idxKey) // TODO
 	if err != nil {
@@ -166,13 +165,13 @@ func (b *Bucket) DbFindImage(ctx context.Context, key string, sizing *imgry.Sizi
 
 // Persists the image blob in our data store
 func (b *Bucket) DbSaveImage(ctx context.Context, im *Image, sizing *imgry.Sizing) (err error) {
+	im.genKey()
 	if err := im.ValidateKey(); err != nil {
 		return err
 	}
-
 	idxKey := b.DbIndexKey(im.Key, sizing)
 
-	err = app.Chainstore.Put(ctx, idxKey, im.Data) // TODO
+	err = app.Chainstore.Put(context.Background(), idxKey, im.Data) // TODO
 	// err = app.Chainstore.Put(idxKey, im.Data)
 	if err != nil {
 		return
@@ -206,7 +205,7 @@ func (b *Bucket) DbDelImage(ctx context.Context, key string) (err error) {
 		return
 	}
 
-	err = app.Chainstore.Del(ctx, idxKey) // + "*") // TODO
+	err = app.Chainstore.Del(context.Background(), idxKey) // + "*") // TODO
 	if err != nil {
 		return
 	}
@@ -224,23 +223,16 @@ func (b *Bucket) DbDelImage(ctx context.Context, key string) (err error) {
 }
 
 func (b *Bucket) DbIndexKey(imageKey string, sizing *imgry.Sizing) string {
-	k, _ := hex.DecodeString(imageKey)
-	imageKey = base64.RawURLEncoding.EncodeToString(k)
-
 	if sizing == nil {
 		return fmt.Sprintf("%s/%s", imageKey[0:2], imageKey)
 	}
-
-	sk := sha1.Sum([]byte(sizing.ToQuery().Encode()))
-	sizingKey := base64.RawURLEncoding.EncodeToString(sk[0:20])
-
-	return fmt.Sprintf("%s/%s:q/%s", imageKey[0:2], imageKey, sizingKey)
+	return fmt.Sprintf("%s/%s:q/%s", imageKey[0:2], imageKey, sha1hash([]byte(sizing.ToQuery().Encode())))
 }
 
 func (b *Bucket) LegacyDbIndexKey(imageKey string, sizing *imgry.Sizing) string {
 	key := fmt.Sprintf("%s/%s", b.ID, imageKey)
 	if sizing != nil {
-		key = fmt.Sprintf("%s:q/%x", key, sha1.Sum([]byte(sizing.ToQuery().Encode())))
+		key = fmt.Sprintf("%s:q/%s", key, brokenSha1hash(sizing.ToQuery().Encode()))
 	}
 	return key
 }
