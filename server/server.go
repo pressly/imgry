@@ -4,14 +4,14 @@ import (
 	"net/http"
 
 	"github.com/goware/cors"
-	"github.com/goware/heartbeat"
-	"github.com/goware/lg"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chi"
 	"github.com/pressly/chi/middleware"
 	"github.com/pressly/consistentrd"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
+	"github.com/pressly/lg"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -44,10 +44,6 @@ func (srv *Server) Configure() (err error) {
 
 	srv.Chainstore, err = srv.Config.GetChainstore()
 	if err != nil {
-		return err
-	}
-
-	if err := srv.Config.SetupStatsD(); err != nil {
 		return err
 	}
 
@@ -89,35 +85,40 @@ func (srv *Server) NewRouter() http.Handler {
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+
+	if cf.Sentry.DSN != "" {
+		lg.DefaultLogger.Formatter = &logrus.JSONFormatter{}
+		r.Use(lg.SanitizingRequestLogger(lg.DefaultLogger, map[string]string{
+			"jwt":   "[token-redacted]",
+			"state": "[token-redacted]",
+			"email": "[email-redacted]",
+		}))
+		r.Use(CapturePanic())
+	} else {
+		lg.DefaultLogger.Formatter = &logrus.TextFormatter{}
+		r.Use(lg.RequestLogger(lg.DefaultLogger))
+		r.Use(lg.PrintPanics)
+	}
 
 	r.Use(middleware.ThrottleBacklog(cf.Limits.MaxRequests, cf.Limits.BacklogSize, cf.Limits.BacklogTimeout))
-
 	r.Use(middleware.CloseNotify)
 	r.Use(middleware.Timeout(cf.Limits.RequestTimeout))
 	// r.Use(httpcoala.Route("HEAD", "GET"))
 
 	r.Use(middleware.Heartbeat("/ping"))
-	r.Use(heartbeat.Route("/favicon.ico"))
-
-	if cf.Airbrake.ApiKey != "" {
-		r.Use(AirbrakeRecoverer(cf.Airbrake.ApiKey))
-	}
 
 	if srv.Config.Profiler {
 		r.Mount("/debug", middleware.Profiler())
 	}
 
-	r.With(trackRoute("root")).Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Write([]byte("."))
-	})
-
-	r.With(trackRoute("imageInfo")).Get("/info", GetImageInfo)
+	r.Get("/", Index)
+	r.Get("/info", GetImageInfo)
 
 	r.Route("/:bucket", func(r chi.Router) {
+		r.Use(BucketURLCtx)
+
 		r.Post("/", BucketImageUpload)
+		r.Get("/add", BucketAddItems)
 
 		r.Group(func(r chi.Router) {
 			cors := cors.New(cors.Options{
@@ -130,20 +131,18 @@ func (srv *Server) NewRouter() http.Handler {
 			})
 			r.Use(cors.Handler)
 
-			// r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/", BucketGetIndex)
-			// r.With(conrd.RouteWithParams("url"), trackRoute("bucketV1GetItem")).Get("/fetch", BucketFetchItem)
-			r.With(trackRoute("bucketV1GetItem")).Get("/", BucketGetIndex)
-			r.With(trackRoute("bucketV1GetItem")).Get("/fetch", BucketFetchItem)
-
+			r.Get("/", BucketGetIndex)
+			r.Get("/fetch", BucketFetchItem)
 		})
 
-		// TODO: review
-		r.With(trackRoute("bucketAddItems")).Get("/add", BucketAddItems)
-		// r.With(conrd.Route()).Get("/:key", BucketGetItem)
-		// r.With(conrd.Route()).Delete("/:key", BucketDeleteItem)
 		r.Get("/:key", BucketGetItem)
 		r.Delete("/:key", BucketDeleteItem)
 	})
 
 	return r
+}
+
+func Index(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+	w.Write([]byte(`.`))
 }

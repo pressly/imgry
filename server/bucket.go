@@ -2,12 +2,15 @@ package server
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
 
-	"github.com/goware/lg"
 	"github.com/pressly/imgry"
+	"github.com/pressly/lg"
 )
 
 var (
@@ -17,30 +20,20 @@ var (
 	BucketIDInvalidator = regexp.MustCompile(`(i?)[^a-z0-9\/_\-:\.]`)
 )
 
-// TODO: unexport all of the Db methods...
-
 type Bucket struct {
 	ID string
 }
 
 func NewBucket(id string) (*Bucket, error) {
-	b := &Bucket{ID: id}
-	if _, err := b.ValidID(); err != nil {
-		return nil, err
+	if id == "" || len(id) > 40 {
+		return nil, ErrInvalidBucketID
 	}
-	return b, nil
-}
 
-func (b *Bucket) ValidID() (bool, error) {
-	if b.ID == "" || len(b.ID) > 40 {
-		return false, ErrInvalidBucketID
-	} else {
-		if BucketIDInvalidator.MatchString(b.ID) {
-			return false, ErrInvalidBucketID
-		} else {
-			return true, nil
-		}
+	if BucketIDInvalidator.MatchString(id) {
+		return nil, ErrInvalidBucketID
 	}
+
+	return &Bucket{ID: id}, nil
 }
 
 func (b *Bucket) AddImagesFromUrls(ctx context.Context, urls []string) ([]*Image, error) {
@@ -54,38 +47,38 @@ func (b *Bucket) AddImagesFromUrls(ctx context.Context, urls []string) ([]*Image
 	// and let the BucketGetItem release it instead..
 
 	// Build images from fetched remote sources
-	images := make([]*Image, len(responses))
-	for i, r := range responses {
-		images[i] = NewImageFromSrcUrl(r.URL.String())
-		defer images[i].Release()
-		if r.Status == 200 && len(r.Data) > 0 {
-			images[i].Data = r.Data
-			if err = images[i].LoadImage(); err != nil {
-				lg.Errorf("LoadBlob data for %s returned error: %s", r.URL.String(), err)
-			}
+	images := make([]*Image, 0, len(responses))
+	for _, r := range responses {
+		im := &Image{SrcURL: r.URL.String()}
+		defer im.Release()
+
+		if r.Status != 200 || len(r.Data) <= 0 {
+			continue
 		}
+
+		im.Data = r.Data
+		if err = im.LoadImage(); err != nil {
+			lg.Errorf("LoadBlob data for %s returned error: %s", r.URL.String(), err)
+			continue
+		}
+		if err := b.AddImage(ctx, im); err != nil {
+			return images, err
+		}
+
+		images = append(images, im)
 	}
 
-	return images, b.AddImages(ctx, images)
+	return images, nil
 }
 
-// TODO: .. how do handle errors here... ? each image would
-// have it's own error .. should we put an Err on each image object...?
-// or return an errList ..
-func (b *Bucket) AddImages(ctx context.Context, images []*Image) (err error) {
-	for _, i := range images {
-		err = b.AddImage(ctx, i)
-	}
-	return err
-}
-
-func (b *Bucket) AddImage(ctx context.Context, i *Image) (err error) {
-	if !i.IsValidImage() || len(i.Data) == 0 {
+func (b *Bucket) AddImage(ctx context.Context, im *Image) error {
+	if !im.IsValidImage() {
 		return imgry.ErrInvalidImageData
 	}
+	im.genKey()
 
 	// Save original size
-	err = b.DbSaveImage(ctx, i, nil)
+	return b.DbSaveImage(ctx, im, nil)
 
 	// TODO .. another time
 	// Build and add seed image sizes for seed size < original
@@ -102,8 +95,6 @@ func (b *Bucket) AddImage(ctx context.Context, i *Image) (err error) {
 	//  SaveInDb(b, seedSize)
 	//  // TODO: store this differently in the redis db .. as a label or something..
 	// }
-
-	return
 }
 
 func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Sizing) (*Image, error) {
@@ -140,29 +131,27 @@ func (b *Bucket) GetImageSize(ctx context.Context, key string, sizing *imgry.Siz
 }
 
 // Loads the image from our table+data store with optional sizing
-func (b *Bucket) DbFindImage(ctx context.Context, key string, optSizing ...*imgry.Sizing) (*Image, error) {
-	var sizing *imgry.Sizing
-	if len(optSizing) > 0 { // sizing is optional
-		sizing = optSizing[0]
-	}
+func (b *Bucket) DbFindImage(ctx context.Context, key string, sizing *imgry.Sizing) (*Image, error) {
+	im := &Image{}
 
 	idxKey := b.DbIndexKey(key, sizing)
-	legacyKey := b.LegacyDbIndexKey(key, sizing)
 
-	im := &Image{}
 	err := app.DB.HGet(idxKey, im)
 	if err != nil {
 		return nil, err
 	}
 	if im.Key == "" {
-		err = app.DB.HGet(legacyKey, im)
+		idxKey = b.LegacyDbIndexKey(key, sizing)
+		err = app.DB.HGet(idxKey, im)
 		if err != nil {
 			return nil, err
 		}
-		return nil, ErrImageNotFound
+		if im.Key == "" {
+			return nil, ErrImageNotFound
+		}
 	}
 
-	data, err := app.Chainstore.Get(context.Background(), idxKey) // TODO
+	data, err := app.Chainstore.Get(ctx, idxKey) // TODO
 	// data, err := app.Chainstore.Get(idxKey) // TODO
 	if err != nil {
 		return nil, err
@@ -183,8 +172,24 @@ func (b *Bucket) DbSaveImage(ctx context.Context, im *Image, sizing *imgry.Sizin
 
 	idxKey := b.DbIndexKey(im.Key, sizing)
 
-	err = app.Chainstore.Put(context.Background(), idxKey, im.Data) // TODO
+	err = app.Chainstore.Put(ctx, idxKey, im.Data) // TODO
 	// err = app.Chainstore.Put(idxKey, im.Data)
+	if err != nil {
+		return
+	}
+	err = app.DB.HSet(idxKey, im)
+	return
+}
+
+// Persists the image blob in our data store
+func (b *Bucket) UploadImage(ctx context.Context, im *Image) (err error) {
+	if err := im.ValidateKey(); err != nil {
+		return err
+	}
+
+	idxKey := b.DbIndexKey(im.Key, nil)
+
+	err = app.Chainstore.Put(ctx, idxKey, im.Data) // TODO
 	if err != nil {
 		return
 	}
@@ -201,41 +206,41 @@ func (b *Bucket) DbDelImage(ctx context.Context, key string) (err error) {
 		return
 	}
 
-	err = app.Chainstore.Del(context.Background(), idxKey) // + "*") // TODO
-	// err = app.Chainstore.Del(idxKey)
+	err = app.Chainstore.Del(ctx, idxKey) // + "*") // TODO
+	if err != nil {
+		return
+	}
+
+	idxKey = b.LegacyDbIndexKey(key, nil)
+
+	err = app.DB.Del(idxKey) // + "*")
+	if err != nil {
+		return
+	}
+
+	err = app.Chainstore.Del(ctx, idxKey) // + "*") // TODO
+
 	return
 }
 
-func (b *Bucket) DbIndexKey(imageKey string, optSizing ...*imgry.Sizing) string {
-	prefix := imageKey
-	if len(imageKey) >= 3 {
-		prefix = imageKey[0:3]
+func (b *Bucket) DbIndexKey(imageKey string, sizing *imgry.Sizing) string {
+	k, _ := hex.DecodeString(imageKey)
+	imageKey = base64.RawURLEncoding.EncodeToString(k)
+
+	if sizing == nil {
+		return fmt.Sprintf("%s/%s", imageKey[0:2], imageKey)
 	}
 
-	key := fmt.Sprintf("%s/%s/%s", b.ID, prefix, imageKey)
-	if b.ID == "" {
-		key = fmt.Sprintf("%s/%s", prefix, imageKey)
-	}
+	sk := sha1.Sum([]byte(sizing.ToQuery().Encode()))
+	sizingKey := base64.RawURLEncoding.EncodeToString(sk[0:20])
 
-	var sizing *imgry.Sizing
-	if len(optSizing) > 0 { // sizing is optional
-		sizing = optSizing[0]
-	}
-
-	if sizing != nil {
-		key = fmt.Sprintf("%s:q/%s", key, sha1Hash(sizing.ToQuery().Encode()))
-	}
-	return key
+	return fmt.Sprintf("%s/%s:q/%s", imageKey[0:2], imageKey, sizingKey)
 }
 
-func (b *Bucket) DbIndexKey(imageKey string, optSizing ...*imgry.Sizing) string {
-	var sizing *imgry.Sizing
-	if len(optSizing) > 0 { // sizing is optional
-		sizing = optSizing[0]
-	}
+func (b *Bucket) LegacyDbIndexKey(imageKey string, sizing *imgry.Sizing) string {
 	key := fmt.Sprintf("%s/%s", b.ID, imageKey)
 	if sizing != nil {
-		key = fmt.Sprintf("%s:q/%s", key, sha1Hash(sizing.ToQuery().Encode()))
+		key = fmt.Sprintf("%s:q/%x", key, sha1.Sum([]byte(sizing.ToQuery().Encode())))
 	}
 	return key
 }

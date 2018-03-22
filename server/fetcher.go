@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goware/lg"
 	"github.com/goware/urlx"
+	"github.com/pressly/lg"
 	"golang.org/x/net/context/ctxhttp"
 )
 

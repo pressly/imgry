@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
@@ -54,6 +55,26 @@ func (r *Responder) ImageError(w http.ResponseWriter, status int, err error) {
 	r.cacheErrors(w, err)
 	w.Header().Set("X-Err", err.Error())
 	r.Data(w, status, []byte{})
+}
+
+func (r *Responder) ImageInfo(w http.ResponseWriter, status int, im *Image) {
+	w.Header().Set("Content-Type", im.MimeType())
+	w.Header().Set("X-Meta-Width", fmt.Sprintf("%d", im.Width))
+	w.Header().Set("X-Meta-Height", fmt.Sprintf("%d", im.Height))
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.CacheMaxAge))
+	w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
+
+	r.JSON(w, status, im)
+}
+
+func (r *Responder) Image(w http.ResponseWriter, status int, im *Image) {
+	w.Header().Set("Content-Type", im.MimeType())
+	w.Header().Set("X-Meta-Width", fmt.Sprintf("%d", im.Width))
+	w.Header().Set("X-Meta-Height", fmt.Sprintf("%d", im.Height))
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", app.Config.CacheMaxAge))
+	w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
+
+	r.Data(w, status, im.Data)
 }
 
 func (r *Responder) ApiError(w http.ResponseWriter, status int, err error) {

@@ -1,31 +1,34 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/goware/lg"
+	raven "github.com/getsentry/raven-go"
+	"github.com/goware/errorx"
+	"github.com/pkg/errors"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chainstore/boltstore"
 	"github.com/pressly/chainstore/lrumgr"
 	"github.com/pressly/chainstore/memstore"
 	"github.com/pressly/chainstore/s3store"
+	"github.com/pressly/lg"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
 	Bind        string `toml:"bind"`
-	MaxProcs    int    `toml:"max_procs"`
-	LogLevel    string `toml:"log_level"`
 	CacheMaxAge int    `toml:"cache_max_age"`
 	TmpDir      string `toml:"tmp_dir"`
 	Profiler    bool   `toml:"profiler"`
+
+	LogLevel string `toml:"log_level"`
+	ErrLevel string `toml:"err_level"`
 
 	// [cluster]
 	Cluster struct {
@@ -57,10 +60,10 @@ type Config struct {
 		RedisUri string `toml:"redis_uri"`
 	} `toml:"db"`
 
-	// [airbrake]
-	Airbrake struct {
-		ApiKey string `toml:"api_key"`
-	} `toml:"airbrake"`
+	// [sentry]
+	Sentry struct {
+		DSN string `toml:"dsn"`
+	} `toml:"sentry"`
 
 	// [chainstore]
 	Chainstore struct {
@@ -70,6 +73,8 @@ type Config struct {
 		S3Bucket      string `toml:"s3_bucket"`
 		S3AccessKey   string `toml:"s3_access_key"`
 		S3SecretKey   string `toml:"s3_secret_key"`
+		S3Region      string `toml:"s3_region"`
+		KMSKeyID      string `toml:"kms_key_id"`
 	} `toml:"chainstore"`
 
 	// [ssl]
@@ -88,7 +93,6 @@ var (
 func init() {
 	cf := Config{
 		Bind:        "0.0.0.0:4446",
-		MaxProcs:    -1,
 		LogLevel:    "INFO",
 		CacheMaxAge: 0,
 		TmpDir:      "",
@@ -140,15 +144,34 @@ func NewConfigFromFile(confFile string, confEnv string) (*Config, error) {
 }
 
 func (cf *Config) Apply() (err error) {
-	// runtime
-	if cf.MaxProcs <= 0 {
-		cf.MaxProcs = runtime.NumCPU()
-	}
-	runtime.GOMAXPROCS(cf.MaxProcs)
-
 	// logging
-	if err := lg.SetLevelString(strings.ToLower(cf.LogLevel)); err != nil {
-		return err
+
+	level, err := logrus.ParseLevel(strings.ToLower(cf.LogLevel))
+	if err != nil {
+		return errors.Wrap(err, "failed to parse logrus level")
+	}
+	if lg.DefaultLogger == nil {
+		lg.DefaultLogger = logrus.New()
+		lg.DefaultLogger.Formatter = &logrus.JSONFormatter{}
+		lg.RedirectStdlogOutput(lg.DefaultLogger)
+	}
+	lg.DefaultLogger.Level = level
+
+	if cf.Sentry.DSN != "" {
+		raven.SetDSN(cf.Sentry.DSN)
+		lg.AlertFn = Logger
+	}
+
+	// Errorx logging level
+	switch cf.ErrLevel {
+	case "INFO":
+		errorx.SetVerbosity(errorx.Info)
+	case "VERBOSE":
+		errorx.SetVerbosity(errorx.Verbose)
+	case "DEBUG":
+		errorx.SetVerbosity(errorx.Debug)
+	case "TRACE":
+		errorx.SetVerbosity(errorx.Trace)
 	}
 
 	// limits
@@ -208,8 +231,13 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 	var store chainstore.Store
 
 	if cf.Chainstore.S3AccessKey != "" && cf.Chainstore.S3SecretKey != "" {
-		s3Store := s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey))
-
+		s3Store := s3store.New(s3store.Config{
+			S3Bucket:    cf.Chainstore.S3Bucket,
+			S3AccessKey: cf.Chainstore.S3AccessKey,
+			S3SecretKey: cf.Chainstore.S3SecretKey,
+			S3Region:    cf.Chainstore.S3Region,
+			KMSKeyID:    cf.Chainstore.KMSKeyID,
+		})
 		// store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
 		store = chainstore.New(memStore, chainstore.Async(nil, s3Store))
 	} else {
