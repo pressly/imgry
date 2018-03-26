@@ -133,15 +133,18 @@ func (b *Bucket) DbFindImage(ctx context.Context, fetchKey string, sizing *imgry
 
 	key := sha1hash([]byte(fetchKey))
 	idxKey := b.DbIndexKey(key, sizing)
+	lg.Debugf("trying new format key: %s", idxKey)
 
 	err := app.DB.HGet(idxKey, im)
 	if err != nil {
 		return nil, err
-
 	}
+
 	if im.Key == "" {
 		key = brokenSha1hash(fetchKey)
 		idxKey = b.LegacyDbIndexKey(key, sizing)
+		lg.Debugf("trying legacy format key: %s", idxKey)
+
 		err = app.DB.HGet(idxKey, im)
 		if err != nil {
 			return nil, err
@@ -182,6 +185,7 @@ func (b *Bucket) DbSaveImage(ctx context.Context, im *Image, sizing *imgry.Sizin
 
 // Persists the image blob in our data store
 func (b *Bucket) UploadImage(ctx context.Context, im *Image) (err error) {
+	im.genKey()
 	if err := im.ValidateKey(); err != nil {
 		return err
 	}
