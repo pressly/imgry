@@ -192,6 +192,8 @@ func (b *Bucket) UploadImage(ctx context.Context, im *Image) (err error) {
 
 	idxKey := b.DbIndexKey(im.Key, nil)
 
+	im.SrcURL, err = S3Upload(b.ID, im)
+
 	err = app.Chainstore.Put(ctx, idxKey, im.Data) // TODO
 	if err != nil {
 		return

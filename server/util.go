@@ -1,41 +1,51 @@
 package server
 
 import (
-	"crypto/md5"
+	"bytes"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/mitchellh/goamz/aws"
-	"github.com/mitchellh/goamz/s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+
 	"github.com/pressly/imgry"
 	"github.com/unrolled/render"
 )
 
-func getS3Bucket(accessKey, secretKey, bucket string) *s3.Bucket {
-	auth := aws.Auth{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
+func S3Client() *s3.S3 {
+	cfg := &aws.Config{
+		Region: aws.String(app.Config.Chainstore.S3Region),
 	}
-	return s3.New(auth, aws.USEast).Bucket(bucket)
+	session := session.New(cfg)
+
+	if app.Config.Chainstore.S3AccessKey != "" {
+		session.Config.WithCredentials(credentials.NewStaticCredentials(app.Config.Chainstore.S3AccessKey, app.Config.Chainstore.S3SecretKey, ""))
+	} else {
+		session.Config.WithCredentials(ec2rolecreds.NewCredentials(session))
+	}
+
+	return s3.New(session)
 }
 
-func s3Path(path string, data []byte, ext string) string {
-	h := md5.Sum(data)
-	return fmt.Sprintf("/%s/uploads/%x.%s", path, h, ext)
-}
+// Upload a file to S3 storage and return the url
+func S3Upload(prefix string, im *Image) (string, error) {
+	path := fmt.Sprintf("/%s/uploads/%s.%s", prefix, im.Key, im.Format)
+	params := &s3.PutObjectInput{
+		Bucket:      aws.String(app.Config.Chainstore.S3Bucket),
+		Key:         aws.String(path),
+		ACL:         aws.String(s3.ObjectCannedACLPublicRead),
+		ContentType: aws.String(im.MimeType()),
+		Body:        bytes.NewReader(im.Data),
+	}
 
-func s3Upload(bucket *s3.Bucket, path string, im *Image) (string, error) {
-	var url string
-	if len(im.Data) == 0 {
-		return "", fmt.Errorf("No image data found for %s", path)
-	}
-	err := bucket.Put(path, im.Data, im.MimeType(), s3.PublicRead)
-	if err != nil {
-		return url, err
-	}
-	url = bucket.URL(path)
-	return url, nil
+	c := S3Client()
+	_, err := c.PutObject(params)
+
+	return fmt.Sprintf("%s/%s%s", c.ClientInfo.Endpoint, app.Config.Chainstore.S3Bucket, path), err
 }
 
 type Responder struct {

@@ -3,7 +3,9 @@ package chainstore
 import (
 	"regexp"
 
-	"golang.org/x/net/context"
+	"context"
+
+	"github.com/pressly/lg"
 )
 
 var (
@@ -76,7 +78,9 @@ func (c *Chain) Put(ctx context.Context, key string, val []byte) (err error) {
 		for _, s := range c.stores {
 			err = s.Put(ctx, key, val)
 			if err != nil {
+				lg.Errorf("error saving key %s with %v", key, err)
 				if c.errCallback != nil {
+					lg.Errorf("callback error saving key %s with %v", key, c.errCallback)
 					c.errCallback(err)
 				}
 				return
@@ -103,7 +107,9 @@ func (c *Chain) Get(ctx context.Context, key string) (val []byte, err error) {
 	for i, s := range c.stores {
 		val, err = s.Get(ctx, key)
 		if err != nil {
+			lg.Errorf("error getting key %s with %v", key, err)
 			if c.errCallback != nil {
+				lg.Errorf("callback error getting key %s with %v", key, c.errCallback)
 				c.errCallback(err)
 			}
 			return

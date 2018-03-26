@@ -69,7 +69,7 @@ func (s *s3Store) Put(ctx context.Context, key string, val []byte) error {
 		params.SetServerSideEncryption(s3.ServerSideEncryptionAwsKms)
 	}
 
-	_, err := s.conn.PutObjectWithContext(aws.Context(ctx), params)
+	_, err := s.conn.PutObjectWithContext(aws.Context(context.Background()), params)
 	return err
 }
 
