@@ -112,7 +112,10 @@ func (srv *Server) NewRouter() http.Handler {
 	}
 
 	r.Get("/", Index)
-	r.Get("/info", GetImageInfo)
+	r.Group(func(r chi.Router) {
+		r.Use(BucketURLCtx)
+		r.Get("/info", GetImageInfo)
+	})
 
 	r.Route("/{bucket}", func(r chi.Router) {
 		r.Use(BucketURLCtx)
