@@ -193,8 +193,11 @@ func (b *Bucket) UploadImage(ctx context.Context, im *Image) (err error) {
 	idxKey := b.DbIndexKey(im.Key, nil)
 
 	im.SrcURL, err = S3Upload(b.ID, im)
+	if err != nil {
+		return
+	}
 
-	err = app.Chainstore.Put(ctx, idxKey, im.Data) // TODO
+	err = app.Chainstore.Put(context.Background(), idxKey, im.Data) // TODO
 	if err != nil {
 		return
 	}
@@ -230,8 +233,10 @@ func (b *Bucket) DbDelImage(ctx context.Context, key string) (err error) {
 
 func (b *Bucket) DbIndexKey(imageKey string, sizing *imgry.Sizing) string {
 	if sizing == nil {
+		lg.Debug(fmt.Sprintf("Index key: %s/%s", imageKey[0:2], imageKey))
 		return fmt.Sprintf("%s/%s", imageKey[0:2], imageKey)
 	}
+	lg.Debug(fmt.Sprintf("Index key: %s/%s:q/%s", imageKey[0:2], imageKey, sha1hash([]byte(sizing.ToQuery().Encode()))))
 	return fmt.Sprintf("%s/%s:q/%s", imageKey[0:2], imageKey, sha1hash([]byte(sizing.ToQuery().Encode())))
 }
 

@@ -230,7 +230,7 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 
 	var store chainstore.Store
 
-	if cf.Chainstore.S3AccessKey != "" && cf.Chainstore.S3SecretKey != "" {
+	if cf.Chainstore.S3Bucket != "" && cf.Chainstore.S3Region != "" {
 		s3Store := s3store.New(s3store.Config{
 			S3Bucket:    cf.Chainstore.S3Bucket,
 			S3AccessKey: cf.Chainstore.S3AccessKey,
@@ -239,9 +239,9 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 			KMSKeyID:    cf.Chainstore.KMSKeyID,
 		})
 		// store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
-		store = chainstore.New(memStore, chainstore.Async(nil, s3Store))
+		store = chainstore.New(memStore, s3Store)
 	} else {
-		store = chainstore.New(memStore, chainstore.Async(nil, diskStore))
+		store = chainstore.New(memStore, diskStore)
 	}
 
 	if err := store.Open(); err != nil {
