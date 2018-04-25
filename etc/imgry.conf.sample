@@ -31,9 +31,12 @@ api_key           = ""
 path              = "/tmp/imgry/"
 mem_cache_size    = 100
 disk_cache_size   = 500
-s3_bucket         = "imgry-dev"
-s3_access_key     = ""
-s3_secret_key     = ""
+    [[chainstore.s3buckets]]
+    s3_bucket         = "imgry-dev"
+    s3_access_key     = ""
+    s3_secret_key     = ""
+    s3_region         = ""
+    kms_key           = ""
 
 [statsd]
 enabled           = true
@@ -41,5 +44,5 @@ address           = "127.0.0.1:8125"
 service_name      = "imgry"
 
 [ssl]
-cert              = "/etc/certs/server-cert.pem" 
+cert              = "/etc/certs/server-cert.pem"
 key               = "/etc/certs/server-key.pem"

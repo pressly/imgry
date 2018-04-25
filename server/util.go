@@ -16,14 +16,14 @@ import (
 	"github.com/unrolled/render"
 )
 
-func S3Client() *s3.S3 {
+func S3Client(s S3Bucket) *s3.S3 {
 	cfg := &aws.Config{
-		Region: aws.String(app.Config.Chainstore.S3Region),
+		Region: aws.String(s.S3Region),
 	}
 	session := session.New(cfg)
 
-	if app.Config.Chainstore.S3AccessKey != "" {
-		session.Config.WithCredentials(credentials.NewStaticCredentials(app.Config.Chainstore.S3AccessKey, app.Config.Chainstore.S3SecretKey, ""))
+	if s.S3AccessKey != "" {
+		session.Config.WithCredentials(credentials.NewStaticCredentials(s.S3AccessKey, s.S3SecretKey, ""))
 	} else {
 		session.Config.WithCredentials(ec2rolecreds.NewCredentials(session))
 	}
@@ -34,18 +34,25 @@ func S3Client() *s3.S3 {
 // Upload a file to S3 storage and return the url
 func S3Upload(prefix string, im *Image) (string, error) {
 	path := fmt.Sprintf("/%s/uploads/%s.%s", prefix, im.Key, im.Format)
-	params := &s3.PutObjectInput{
-		Bucket:      aws.String(app.Config.Chainstore.S3Bucket),
-		Key:         aws.String(path),
-		ACL:         aws.String(s3.ObjectCannedACLPublicRead),
-		ContentType: aws.String(im.MimeType()),
-		Body:        bytes.NewReader(im.Data),
+	resp := ""
+	for _, s := range app.Config.Chainstore.S3Buckets {
+		params := &s3.PutObjectInput{
+			Bucket:      aws.String(s.S3Bucket),
+			Key:         aws.String(path),
+			ACL:         aws.String(s3.ObjectCannedACLPublicRead),
+			ContentType: aws.String(im.MimeType()),
+			Body:        bytes.NewReader(im.Data),
+		}
+
+		c := S3Client(s)
+		_, err := c.PutObject(params)
+		if err != nil {
+			return "", err
+		}
+		resp = fmt.Sprintf("%s/%s%s", c.ClientInfo.Endpoint, s.S3Bucket, path)
 	}
 
-	c := S3Client()
-	_, err := c.PutObject(params)
-
-	return fmt.Sprintf("%s/%s%s", c.ClientInfo.Endpoint, app.Config.Chainstore.S3Bucket, path), err
+	return resp, nil
 }
 
 type Responder struct {

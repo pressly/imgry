@@ -67,14 +67,10 @@ type Config struct {
 
 	// [chainstore]
 	Chainstore struct {
-		Path          string `toml:"path"`
-		MemCacheSize  int64  `toml:"mem_cache_size"`
-		DiskCacheSize int64  `toml:"disk_cache_size"`
-		S3Bucket      string `toml:"s3_bucket"`
-		S3AccessKey   string `toml:"s3_access_key"`
-		S3SecretKey   string `toml:"s3_secret_key"`
-		S3Region      string `toml:"s3_region"`
-		KMSKeyID      string `toml:"kms_key_id"`
+		Path          string     `toml:"path"`
+		MemCacheSize  int64      `toml:"mem_cache_size"`
+		DiskCacheSize int64      `toml:"disk_cache_size"`
+		S3Buckets     []S3Bucket `toml:"s3buckets"`
 	} `toml:"chainstore"`
 
 	// [ssl]
@@ -82,6 +78,14 @@ type Config struct {
 		Cert string `toml:"cert"`
 		Key  string `toml:"key"`
 	} `toml:"ssl"`
+}
+
+type S3Bucket struct {
+	S3Bucket    string `toml:"s3_bucket"`
+	S3AccessKey string `toml:"s3_access_key"`
+	S3SecretKey string `toml:"s3_secret_key"`
+	S3Region    string `toml:"s3_region"`
+	KMSKeyID    string `toml:"kms_key_id"`
 }
 
 var (
@@ -224,25 +228,32 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 		return nil, err
 	}
 
+	var stores []chainstore.Store
+
 	// Build the stores and setup the chain
 	memStore := memstore.New(cf.Chainstore.MemCacheSize * 1024 * 1024)
-	diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024, boltstore.New(cf.Chainstore.Path+"store.db", "imgry"))
 
-	var store chainstore.Store
+	stores = append(stores, memStore)
 
-	if cf.Chainstore.S3Bucket != "" && cf.Chainstore.S3Region != "" {
-		s3Store := s3store.New(s3store.Config{
-			S3Bucket:    cf.Chainstore.S3Bucket,
-			S3AccessKey: cf.Chainstore.S3AccessKey,
-			S3SecretKey: cf.Chainstore.S3SecretKey,
-			S3Region:    cf.Chainstore.S3Region,
-			KMSKeyID:    cf.Chainstore.KMSKeyID,
-		})
-		// store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
-		store = chainstore.New(memStore, s3Store)
-	} else {
-		store = chainstore.New(memStore, diskStore)
+	for _, s := range cf.Chainstore.S3Buckets {
+
+		if s.S3Bucket != "" && s.S3Region != "" {
+			s3Store := s3store.New(s3store.Config{
+				S3Bucket:    s.S3Bucket,
+				S3AccessKey: s.S3AccessKey,
+				S3SecretKey: s.S3SecretKey,
+				S3Region:    s.S3Region,
+				KMSKeyID:    s.KMSKeyID,
+			})
+			stores = append(stores, s3Store)
+		}
 	}
+	if len(stores) < 2 {
+		diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024, boltstore.New(cf.Chainstore.Path+"store.db", "imgry"))
+		stores = append(stores, diskStore)
+	}
+
+	store := chainstore.New(stores...)
 
 	if err := store.Open(); err != nil {
 		return nil, err
