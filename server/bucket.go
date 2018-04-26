@@ -153,6 +153,7 @@ func (b *Bucket) DbFindImage(ctx context.Context, fetchKey string, sizing *imgry
 			return nil, ErrImageNotFound
 		}
 	}
+	lg.Debugf("Key %s found, fetching it from chainstore", idxKey)
 	data, err := app.Chainstore.Get(ctx, idxKey) // TODO
 	// data, err := app.Chainstore.Get(idxKey) // TODO
 	if err != nil {
