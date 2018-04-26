@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -81,6 +82,10 @@ func (s *s3Store) Get(ctx context.Context, key string) ([]byte, error) {
 
 	resp, err := s.conn.GetObjectWithContext(aws.Context(ctx), params)
 	if err != nil {
+		aerr, ok := err.(awserr.Error)
+		if ok && aerr.Code() == s3.ErrCodeNoSuchKey {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -99,5 +104,9 @@ func (s *s3Store) Del(ctx context.Context, key string) error {
 	}
 
 	_, err := s.conn.DeleteObjectWithContext(aws.Context(ctx), &params)
+	aerr, ok := err.(awserr.Error)
+	if ok && aerr.Code() == s3.ErrCodeNoSuchKey {
+		return nil
+	}
 	return err
 }
