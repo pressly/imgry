@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/pressly/imgry"
+	"github.com/pressly/lg"
 	"github.com/unrolled/render"
 )
 
@@ -68,6 +69,7 @@ func (r *Responder) ImageError(w http.ResponseWriter, status int, err error) {
 		r.Data(w, status, []byte{})
 		return
 	}
+	lg.Error(err)
 
 	r.cacheErrors(w, err)
 	w.Header().Set("X-Err", err.Error())
@@ -99,6 +101,7 @@ func (r *Responder) ApiError(w http.ResponseWriter, status int, err error) {
 		r.JSON(w, status, []byte{})
 		return
 	}
+	lg.Error(err)
 
 	r.cacheErrors(w, err)
 	r.JSON(w, status, map[string]interface{}{"error": err.Error()})
