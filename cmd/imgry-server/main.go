@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/goware/lg"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/server"
+	"github.com/pressly/lg"
 	"github.com/zenazn/goji/graceful"
 )
 

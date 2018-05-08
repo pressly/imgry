@@ -1,33 +1,34 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/goware/go-metrics"
-	"github.com/goware/lg"
+	raven "github.com/getsentry/raven-go"
+	"github.com/goware/errorx"
+	"github.com/pkg/errors"
 	"github.com/pressly/chainstore"
 	"github.com/pressly/chainstore/boltstore"
 	"github.com/pressly/chainstore/lrumgr"
 	"github.com/pressly/chainstore/memstore"
-	"github.com/pressly/chainstore/metricsmgr"
 	"github.com/pressly/chainstore/s3store"
+	"github.com/pressly/lg"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
 	Bind        string `toml:"bind"`
-	MaxProcs    int    `toml:"max_procs"`
-	LogLevel    string `toml:"log_level"`
 	CacheMaxAge int    `toml:"cache_max_age"`
 	TmpDir      string `toml:"tmp_dir"`
 	Profiler    bool   `toml:"profiler"`
+
+	LogLevel string `toml:"log_level"`
+	ErrLevel string `toml:"err_level"`
 
 	// [cluster]
 	Cluster struct {
@@ -59,33 +60,32 @@ type Config struct {
 		RedisUri string `toml:"redis_uri"`
 	} `toml:"db"`
 
-	// [airbrake]
-	Airbrake struct {
-		ApiKey string `toml:"api_key"`
-	} `toml:"airbrake"`
+	// [sentry]
+	Sentry struct {
+		DSN string `toml:"dsn"`
+	} `toml:"sentry"`
 
 	// [chainstore]
 	Chainstore struct {
-		Path          string `toml:"path"`
-		MemCacheSize  int64  `toml:"mem_cache_size"`
-		DiskCacheSize int64  `toml:"disk_cache_size"`
-		S3Bucket      string `toml:"s3_bucket"`
-		S3AccessKey   string `toml:"s3_access_key"`
-		S3SecretKey   string `toml:"s3_secret_key"`
+		Path          string     `toml:"path"`
+		MemCacheSize  int64      `toml:"mem_cache_size"`
+		DiskCacheSize int64      `toml:"disk_cache_size"`
+		S3Buckets     []S3Bucket `toml:"s3buckets"`
 	} `toml:"chainstore"`
-
-	// [statsd]
-	StatsD struct {
-		Enabled     bool   `toml:"enabled"`
-		Address     string `toml:"address"`
-		ServiceName string `toml:"service_name"`
-	}
 
 	// [ssl]
 	SSL struct {
 		Cert string `toml:"cert"`
 		Key  string `toml:"key"`
 	} `toml:"ssl"`
+}
+
+type S3Bucket struct {
+	S3Bucket    string `toml:"s3_bucket"`
+	S3AccessKey string `toml:"s3_access_key"`
+	S3SecretKey string `toml:"s3_secret_key"`
+	S3Region    string `toml:"s3_region"`
+	KMSKeyID    string `toml:"kms_key_id"`
 }
 
 var (
@@ -97,7 +97,6 @@ var (
 func init() {
 	cf := Config{
 		Bind:        "0.0.0.0:4446",
-		MaxProcs:    -1,
 		LogLevel:    "INFO",
 		CacheMaxAge: 0,
 		TmpDir:      "",
@@ -149,15 +148,34 @@ func NewConfigFromFile(confFile string, confEnv string) (*Config, error) {
 }
 
 func (cf *Config) Apply() (err error) {
-	// runtime
-	if cf.MaxProcs <= 0 {
-		cf.MaxProcs = runtime.NumCPU()
-	}
-	runtime.GOMAXPROCS(cf.MaxProcs)
-
 	// logging
-	if err := lg.SetLevelString(strings.ToLower(cf.LogLevel)); err != nil {
-		return err
+
+	level, err := logrus.ParseLevel(strings.ToLower(cf.LogLevel))
+	if err != nil {
+		return errors.Wrap(err, "failed to parse logrus level")
+	}
+	if lg.DefaultLogger == nil {
+		lg.DefaultLogger = logrus.New()
+		lg.DefaultLogger.Formatter = &logrus.JSONFormatter{}
+		lg.RedirectStdlogOutput(lg.DefaultLogger)
+	}
+	lg.DefaultLogger.Level = level
+
+	if cf.Sentry.DSN != "" {
+		raven.SetDSN(cf.Sentry.DSN)
+		lg.AlertFn = Logger
+	}
+
+	// Errorx logging level
+	switch cf.ErrLevel {
+	case "INFO":
+		errorx.SetVerbosity(errorx.Info)
+	case "VERBOSE":
+		errorx.SetVerbosity(errorx.Verbose)
+	case "DEBUG":
+		errorx.SetVerbosity(errorx.Debug)
+	case "TRACE":
+		errorx.SetVerbosity(errorx.Trace)
 	}
 
 	// limits
@@ -210,56 +228,35 @@ func (cf *Config) GetChainstore() (chainstore.Store, error) {
 		return nil, err
 	}
 
+	var stores []chainstore.Store
+
 	// Build the stores and setup the chain
-	memStore := metricsmgr.New("fn.store.mem",
-		memstore.New(cf.Chainstore.MemCacheSize*1024*1024),
-	)
+	memStore := memstore.New(cf.Chainstore.MemCacheSize * 1024 * 1024)
 
-	diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024,
-		metricsmgr.New("fn.store.bolt",
-			boltstore.New(cf.Chainstore.Path+"store.db", "imgry"),
-		),
-	)
+	stores = append(stores, memStore)
 
-	var store chainstore.Store
+	for _, s := range cf.Chainstore.S3Buckets {
 
-	if cf.Chainstore.S3AccessKey != "" && cf.Chainstore.S3SecretKey != "" {
-		s3Store := metricsmgr.New("fn.store.s3",
-			s3store.New(cf.Chainstore.S3Bucket, cf.Chainstore.S3AccessKey, cf.Chainstore.S3SecretKey),
-		)
-
-		// store = chainstore.New(memStore, chainstore.Async(diskStore, s3Store))
-		store = chainstore.New(memStore, chainstore.Async(nil, s3Store))
-	} else {
-		store = chainstore.New(memStore, chainstore.Async(nil, diskStore))
+		if s.S3Bucket != "" && s.S3Region != "" {
+			s3Store := s3store.New(s3store.Config{
+				S3Bucket:    s.S3Bucket,
+				S3AccessKey: s.S3AccessKey,
+				S3SecretKey: s.S3SecretKey,
+				S3Region:    s.S3Region,
+				KMSKeyID:    s.KMSKeyID,
+			})
+			stores = append(stores, s3Store)
+		}
 	}
+	if len(stores) < 2 {
+		diskStore := lrumgr.New(cf.Chainstore.DiskCacheSize*1024*1024, boltstore.New(cf.Chainstore.Path+"store.db", "imgry"))
+		stores = append(stores, diskStore)
+	}
+
+	store := chainstore.New(stores...)
 
 	if err := store.Open(); err != nil {
 		return nil, err
 	}
 	return store, nil
-}
-
-func (cf *Config) SetupStatsD() error {
-	if cf.StatsD.Enabled {
-		sink, err := metrics.NewStatsdSink(cf.StatsD.Address)
-		if err != nil {
-			return err
-		}
-
-		config := &metrics.Config{
-			ServiceName:          cf.StatsD.ServiceName, // Client service name
-			HostName:             "",
-			EnableHostname:       false,            // Enable hostname prefix
-			EnableRuntimeMetrics: true,             // Enable runtime profiling
-			EnableTypePrefix:     false,            // Disable type prefix
-			TimerGranularity:     time.Millisecond, // Timers are in milliseconds
-			ProfileInterval:      time.Second * 60, // Poll runtime every minute
-		}
-
-		config.HostName, _ = os.Hostname()
-
-		metrics.NewGlobal(config, sink)
-	}
-	return nil
 }

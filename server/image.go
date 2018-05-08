@@ -2,20 +2,19 @@ package server
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/goware/go-metrics"
-	"github.com/goware/lg"
 	"github.com/pressly/imgry"
 	"github.com/pressly/imgry/imagick"
+	"github.com/pressly/lg"
 )
 
 var (
-	EmptyImageKey = sha1Hash("")
+	EmptyImageKey = fmt.Sprintf("%x", sha1.Sum([]byte("")))
 
 	ErrInvalidImageKey = errors.New("invalid image key")
 )
@@ -25,7 +24,7 @@ var (
 
 type Image struct {
 	Key         string        `json:"key" redis:"key"`
-	SrcUrl      string        `json:"src_url" redis:"src"`
+	SrcURL      string        `json:"src_url" redis:"src"`
 	Width       int           `json:"width" redis:"w"`
 	Height      int           `json:"height" redis:"h"`
 	Format      string        `json:"format" redis:"f"`
@@ -36,19 +35,26 @@ type Image struct {
 	img imgry.Image
 }
 
-// Hrmm.. how will we generate a Uid if we just have a blob and no srcurl..?
-// perhaps we allow the uid to be like "something.jpg" if they want..?
-// unlikely to be collisions anyways...
-// how to dedupe those..? guess we cant.. only if it was based on blob..
-func NewImageFromKey(key string) *Image {
-	return &Image{Key: key}
+func (im *Image) genKey() {
+	if im.SrcURL != "" {
+		im.Key = sha1hash([]byte(im.SrcURL))
+		return
+	}
+
+	if len(im.Data) > 0 {
+		im.Key = sha1hash(im.Data)
+		return
+	}
+
+	im.Key = EmptyImageKey
 }
 
-func NewImageFromSrcUrl(srcUrl string) *Image {
-	return &Image{SrcUrl: srcUrl, Key: sha1Hash(srcUrl)}
+func sha1hash(in []byte) string {
+	sum := sha1.Sum(in)
+	return base64.RawURLEncoding.EncodeToString(sum[0:])
 }
 
-func sha1Hash(in string) string {
+func brokenSha1hash(in string) string {
 	hasher := sha1.New()
 	fmt.Fprintf(hasher, in)
 	return hex.EncodeToString(hasher.Sum(nil))
@@ -58,8 +64,6 @@ func sha1Hash(in string) string {
 // or MakeSize() are called.
 
 func (im *Image) LoadImage() (err error) {
-	defer metrics.MeasureSince([]string{"fn.image.LoadImage"}, time.Now())
-
 	// TODO: throttle the number of images we load at a given time..
 	// this should be configurable...
 
@@ -82,7 +86,7 @@ func (im *Image) LoadImage() (err error) {
 	im.img, err = ng.LoadBlob(im.Data, formatHint)
 	if err != nil {
 		if err == imagick.ErrEngineFailure {
-			lg.Fatalf("**** ENGINE FAILURE on %s", im.SrcUrl)
+			lg.Fatalf("**** ENGINE FAILURE on %s", im.SrcURL)
 		}
 		return err
 	}
@@ -93,7 +97,7 @@ func (im *Image) LoadImage() (err error) {
 }
 
 func (im *Image) SrcFilename() string {
-	fname := strings.Split(im.SrcUrl, "?")
+	fname := strings.Split(im.SrcURL, "?")
 	fname = strings.Split(fname[0], "/")
 	return fname[len(fname)-1]
 }
@@ -105,13 +109,15 @@ func (im *Image) SrcFileExtension() string {
 }
 
 func (im *Image) IsValidImage() bool {
-	return im.Width > 0 && im.Height > 0 && im.Format != ""
+	return im != nil &&
+		im.Width > 0 &&
+		im.Height > 0 &&
+		im.Format != "" &&
+		len(im.Data) > 0
 }
 
 // Sizes the current image in place
 func (im *Image) SizeIt(sizing *imgry.Sizing) error {
-	defer metrics.MeasureSince([]string{"fn.image.SizeIt"}, time.Now())
-
 	if err := im.ValidateKey(); err != nil {
 		return err
 	}
@@ -134,8 +140,6 @@ func (im *Image) SizeIt(sizing *imgry.Sizing) error {
 
 // Create a new blob object from an existing size
 func (im *Image) MakeSize(sizing *imgry.Sizing) (*Image, error) {
-	defer metrics.MeasureSince([]string{"fn.image.MakeSize"}, time.Now())
-
 	if err := im.ValidateKey(); err != nil {
 		return nil, err
 	}
@@ -143,7 +147,7 @@ func (im *Image) MakeSize(sizing *imgry.Sizing) (*Image, error) {
 	im2 := &Image{
 		Key:         im.Key,
 		Data:        im.Data,
-		SrcUrl:      im.SrcUrl,
+		SrcURL:      im.SrcURL,
 		Sizing:      sizing,
 		SizingQuery: sizing.ToQuery().Encode(),
 	}
@@ -182,7 +186,6 @@ func (im *Image) Release() {
 	if im == nil {
 		return
 	}
-	defer metrics.IncrCounter([]string{"fn.image.Release"}, 1)
 
 	if im.img != nil {
 		im.img.Release()
@@ -194,4 +197,21 @@ func (im *Image) sync() {
 	im.Height = im.img.Height()
 	im.Format = im.img.Format()
 	im.Data = im.img.Data()
+}
+
+func (im *Image) Info() imgry.ImageInfo {
+	if im == nil {
+		return imgry.ImageInfo{}
+	}
+	im.sync()
+
+	return imgry.ImageInfo{
+		URL:           im.SrcURL,
+		Format:        im.Format,
+		Mimetype:      im.MimeType(),
+		Width:         im.Width,
+		Height:        im.Height,
+		AspectRatio:   float64(im.Width) / float64(im.Height),
+		ContentLength: len(im.Data),
+	}
 }

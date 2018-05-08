@@ -1,26 +1,15 @@
 package server
 
 import (
-	"fmt"
+	"context"
 	"net/http"
-	"time"
 
-	"github.com/goware/go-metrics"
-	"github.com/tobi/airbrake-go"
+	"github.com/goware/urlx"
+	"github.com/pressly/chi"
 )
 
-// Airbrake recoverer middleware to capture and report any panics to
-// airbrake.io.
-func AirbrakeRecoverer(apiKey string) func(http.Handler) http.Handler {
-	airbrake.ApiKey = apiKey
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if apiKey != "" {
-				defer airbrake.CapturePanic(r)
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+type contextKey struct {
+	name string
 }
 
 type wrappedResponseWriter struct {
@@ -28,30 +17,35 @@ type wrappedResponseWriter struct {
 	status int
 }
 
-func (l *wrappedResponseWriter) WriteHeader(status int) {
-	l.status = status
-	l.ResponseWriter.WriteHeader(status)
-}
+var (
+	bucketCtxKey = contextKey{"bucket"}
+	imageCtxKey  = contextKey{"imageURL"}
+	sizingCtxKey = contextKey{"imageSizing"}
+)
 
-func (l *wrappedResponseWriter) Status() int {
-	return l.status
-}
+func BucketURLCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 
-func trackRoute(metricID string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		route := fmt.Sprintf("route.%s", metricID)
-		errRoute := fmt.Sprintf("%s-err", route)
-
-		handler := func(w http.ResponseWriter, r *http.Request) {
-			defer metrics.MeasureSince([]string{route}, time.Now())
-
-			lw := &wrappedResponseWriter{w, -1}
-			next.ServeHTTP(lw, r)
-
-			if lw.Status() >= 400 {
-				metrics.IncrCounter([]string{errRoute}, 1)
+		if b := chi.URLParam(r, "bucket"); b != "" {
+			bucket, err := NewBucket(b)
+			if err != nil {
+				respond.ImageError(w, 422, err)
+				return
 			}
+			ctx = context.WithValue(ctx, bucketCtxKey, bucket)
 		}
-		return http.HandlerFunc(handler)
-	}
+
+		if i, ok := r.URL.Query()["url"]; ok {
+			u, err := urlx.Parse(i[0])
+			if err != nil {
+				respond.ImageError(w, 422, ErrInvalidURL)
+				return
+			}
+
+			ctx = context.WithValue(ctx, imageCtxKey, u.String())
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }

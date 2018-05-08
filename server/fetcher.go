@@ -11,9 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goware/go-metrics"
-	"github.com/goware/lg"
 	"github.com/goware/urlx"
+	"github.com/pressly/lg"
 	"golang.org/x/net/context/ctxhttp"
 )
 
@@ -100,8 +99,6 @@ func (f Fetcher) Get(ctx context.Context, url string) (*FetcherResponse, error) 
 }
 
 func (f Fetcher) GetAll(ctx context.Context, urls []string) ([]*FetcherResponse, error) {
-	defer metrics.MeasureSince([]string{"fn.FetchRemoteData"}, time.Now())
-
 	fetches := make([]*FetcherResponse, len(urls))
 
 	var wg sync.WaitGroup

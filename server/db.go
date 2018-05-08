@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/goware/go-metrics"
 )
 
 var (
@@ -51,8 +50,6 @@ func (db *DB) Ping() error {
 }
 
 func (db *DB) Get(key string) (val []byte, err error) {
-	defer metrics.MeasureSince([]string{"fn.redis.Get"}, time.Now())
-
 	conn := db.conn()
 	defer conn.Close()
 	reply, err := conn.Do("GET", key)
@@ -67,8 +64,6 @@ func (db *DB) Get(key string) (val []byte, err error) {
 }
 
 func (db *DB) Set(key string, obj []byte, expireIn ...time.Duration) (err error) {
-	defer metrics.MeasureSince([]string{"fn.redis.Set"}, time.Now())
-
 	conn := db.conn()
 	defer conn.Close()
 
@@ -107,8 +102,6 @@ func (db *DB) Exists(key string) (bool, error) {
 }
 
 func (db *DB) HGet(key string, dest interface{}) error {
-	defer metrics.MeasureSince([]string{"fn.redis.HGet"}, time.Now())
-
 	conn := db.conn()
 	defer conn.Close()
 	reply, err := redis.Values(conn.Do("HGETALL", key))
@@ -119,8 +112,6 @@ func (db *DB) HGet(key string, dest interface{}) error {
 }
 
 func (db *DB) HSet(key string, src interface{}) error {
-	defer metrics.MeasureSince([]string{"fn.redis.HSet"}, time.Now())
-
 	conn := db.conn()
 	defer conn.Close()
 	_, err := conn.Do("HMSET", redis.Args{}.Add(key).AddFlat(src)...)
